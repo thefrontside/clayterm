@@ -13,6 +13,7 @@
 #include "../clay/clay.h"
 #include "buffer.h"
 #include "cell.h"
+#include "mem.h"
 #include "utf8.h"
 #include "wcwidth.h"
 
@@ -290,7 +291,7 @@ static uint32_t rd(uint32_t *buf, int len, int *i) {
 static float rdf(uint32_t *buf, int len, int *i) {
   uint32_t v = rd(buf, len, i);
   float f;
-  __builtin_memcpy(&f, &v, 4);
+  memcpy(&f, &v, 4);
   return f;
 }
 
