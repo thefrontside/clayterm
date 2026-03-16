@@ -9,8 +9,8 @@
  *   measure        — Clay text measurement callback
  */
 
-#include "../clay/clay.h"
 #include "clayterm.h"
+#include "../clay/clay.h"
 #include "buffer.h"
 #include "cell.h"
 #include "utf8.h"

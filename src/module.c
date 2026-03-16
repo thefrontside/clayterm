@@ -4,6 +4,6 @@
 
 #include "buffer.c"
 #include "cell.c"
+#include "clayterm.c"
 #include "utf8.c"
 #include "wcwidth.c"
-#include "clayterm.c"

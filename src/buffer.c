@@ -9,9 +9,7 @@ void *memcpy(void *dst, const void *src, size_t n) {
   return __builtin_memcpy(dst, src, n);
 }
 
-void *memset(void *dst, int c, size_t n) {
-  return __builtin_memset(dst, c, n);
-}
+void *memset(void *dst, int c, size_t n) { return __builtin_memset(dst, c, n); }
 
 static size_t strlen(const char *s) {
   size_t n = 0;
