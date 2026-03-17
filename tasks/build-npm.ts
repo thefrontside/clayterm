@@ -31,10 +31,10 @@ await build({
     license: "MIT",
     repository: {
       type: "git",
-      url: "git+https://github.com/cowboyd/clayterm.git",
+      url: "git+https://github.com/thefrontside/clayterm.git",
     },
     bugs: {
-      url: "https://github.com/cowboyd/clayterm/issues",
+      url: "https://github.com/thefrontside/clayterm/issues",
     },
     engines: {
       node: ">= 16",

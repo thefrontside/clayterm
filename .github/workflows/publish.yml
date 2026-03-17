@@ -34,7 +34,7 @@ jobs:
         run: deno task build:jsr ${{steps.vars.outputs.version}}
 
       - name: dry run publish
-        run: npx jsr publish --dry-run --allow-dirty --token=${{secrets.JSR_TOKEN}}
+        run: deno publish --dry-run --allow-dirty
 
   verify-npm:
     runs-on: ubuntu-latest
@@ -120,4 +120,4 @@ jobs:
         run: deno task build:jsr ${{steps.vars.outputs.version}}
 
       - name: Publish JSR
-        run: npx jsr publish --allow-dirty --token=${{secrets.JSR_TOKEN}}
+        run: deno publish --allow-dirty
