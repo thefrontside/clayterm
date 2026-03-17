@@ -1,5 +1,6 @@
 {
   "name": "@clayterm/clayterm",
+  "license": "MIT",
   "tasks": {
     "test": "deno test --allow-read",
     "fmt": "deno fmt && clang-format -i src/*.c src/*.h",
