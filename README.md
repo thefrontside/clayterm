@@ -48,10 +48,10 @@ multi-byte sequences time to arrive.
 +---------------+                +---------------------------+
 |               |  raw byte array|                           |
 | stdin.read    | =============> | trie match (keys/seqs)    |
-|               |                |   -> mouse protocol parse |
+|               |                |   -> mouse protocol       |
 |               |                |   -> UTF-8 decode         |
-+---------------+                |   -> ESC latency timer    |
-                                 |   -> event array          |
++---------------+                |   -> ESC codes            |
+                                 |                           |
 +---------------+                |                           |
 |               |  events[]      |                           |
 | CharEvent     | <============= |                           |
