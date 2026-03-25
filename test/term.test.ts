@@ -28,6 +28,22 @@ describe("term", () => {
     expect(out).toContain("Hello, World!");
   });
 
+  it("text inherits parent background", () => {
+    let ansi = decode(term.render([
+      open("root", {
+        layout: { width: grow(), height: grow(), direction: "ttb" },
+        bg: rgba(255, 0, 0),
+      }),
+      text("hi"),
+      close(),
+    ]));
+
+    // the SGR active when "h" is emitted should include the
+    // parent's red background (48;2;255;0;0), not terminal default
+    let before = ansi.slice(0, ansi.indexOf("h"));
+    expect(before).toContain("\x1b[48;2;255;0;0");
+  });
+
   it("renders borders and padding", () => {
     let out = print(
       decode(term.render([

@@ -73,7 +73,9 @@ static void setcell(struct Clayterm *ct, int x, int y, uint32_t ch, uint32_t fg,
   Cell *c = cell_at(ct, ct->back, x, y);
   c->ch = ch;
   c->fg = fg;
-  c->bg = bg;
+  if (!(bg & ATTR_DEFAULT)) {
+    c->bg = bg;
+  }
 }
 
 /* ── Escape sequence generation ───────────────────────────────────── */
