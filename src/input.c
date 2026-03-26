@@ -216,6 +216,157 @@ static int parse_mouse(struct InputState *st, struct InputEvent *ev) {
   return rv;
 }
 
+/* ── Kitty keyboard protocol (CSI u) ──────────────────────────────── */
+
+static uint16_t kitty_key(int cp) {
+  switch (cp) {
+  case 9:
+    return KEY_TAB;
+  case 13:
+    return KEY_ENTER;
+  case 27:
+    return KEY_ESC;
+  case 127:
+    return KEY_BACKSPACE;
+  case 57344:
+    return KEY_ESC;
+  case 57345:
+    return KEY_ENTER;
+  case 57346:
+    return KEY_TAB;
+  case 57347:
+    return KEY_BACKSPACE;
+  case 57348:
+    return KEY_INSERT;
+  case 57349:
+    return KEY_DELETE;
+  case 57350:
+    return KEY_ARROW_LEFT;
+  case 57351:
+    return KEY_ARROW_RIGHT;
+  case 57352:
+    return KEY_ARROW_UP;
+  case 57353:
+    return KEY_ARROW_DOWN;
+  case 57354:
+    return KEY_PGUP;
+  case 57355:
+    return KEY_PGDN;
+  case 57356:
+    return KEY_HOME;
+  case 57357:
+    return KEY_END;
+  case 57376:
+    return KEY_F1;
+  case 57377:
+    return KEY_F2;
+  case 57378:
+    return KEY_F3;
+  case 57379:
+    return KEY_F4;
+  case 57380:
+    return KEY_F5;
+  case 57381:
+    return KEY_F6;
+  case 57382:
+    return KEY_F7;
+  case 57383:
+    return KEY_F8;
+  case 57384:
+    return KEY_F9;
+  case 57385:
+    return KEY_F10;
+  case 57386:
+    return KEY_F11;
+  case 57387:
+    return KEY_F12;
+  default:
+    return 0;
+  }
+}
+
+static uint8_t kitty_mod(int mod) {
+  if (mod <= 1)
+    return 0;
+  int bits = mod - 1;
+  uint8_t out = 0;
+  if (bits & 1)
+    out |= MOD_SHIFT;
+  if (bits & 2)
+    out |= MOD_ALT;
+  if (bits & 4)
+    out |= MOD_CTRL;
+  return out;
+}
+
+static int parse_csi_u(struct InputState *st, struct InputEvent *ev) {
+  /* \x1b[ codepoint ; modifiers u   or   \x1b[ codepoint u */
+  if (st->len < 2)
+    return PARSE_NEED_MORE;
+  if (st->buf[0] != '\x1b' || st->buf[1] != '[')
+    return PARSE_ERR;
+  if (st->len < 4)
+    return PARSE_NEED_MORE;
+  if (st->buf[2] < '0' || st->buf[2] > '9')
+    return PARSE_ERR;
+
+  int cp = -1;
+  int mod = -1;
+  int cur = -1;
+  int i = 2;
+  int done = 0;
+
+  while (i < st->len && !done) {
+    char c = st->buf[i];
+    if (c >= '0' && c <= '9') {
+      if (cur == -1)
+        cur = 0;
+      cur = cur * 10 + (c - '0');
+    } else if (c == ';' && cp == -1 && cur != -1) {
+      cp = cur;
+      cur = -1;
+    } else if (c == 'u' && cur != -1) {
+      if (cp == -1) {
+        cp = cur;
+        mod = 1;
+      } else {
+        mod = cur;
+      }
+      done = 1;
+    } else if (c == ':' && cur != -1) {
+      /* sub-field separator (event-type, alternate keys) — skip */
+      if (cp == -1) {
+        cp = cur;
+      }
+      cur = -1;
+      /* consume until next ';' or 'u' */
+      i++;
+      while (i < st->len && st->buf[i] != ';' && st->buf[i] != 'u')
+        i++;
+      continue;
+    } else {
+      return PARSE_ERR;
+    }
+    i++;
+  }
+
+  if (!done)
+    return PARSE_NEED_MORE;
+
+  ev->type = EVENT_KEY;
+  ev->mod = kitty_mod(mod);
+
+  uint16_t key = kitty_key(cp);
+  if (key) {
+    ev->key = key;
+  } else {
+    ev->ch = (uint32_t)cp;
+  }
+
+  shift(st, i);
+  return PARSE_OK;
+}
+
 /* ── Cap table (xterm defaults) ───────────────────────────────────── */
 
 struct CapEntry {
@@ -532,6 +683,22 @@ int input_scan(struct InputState *st, const char *buf, int len, double now) {
         if (rv == PARSE_OK) {
           struct InputEvent *ev = emit(st);
           *ev = mev;
+          st->esc_time = 0;
+          continue;
+        }
+        if (rv == PARSE_NEED_MORE) {
+          return accepted;
+        }
+      }
+
+      /* try CSI u (Kitty keyboard protocol) */
+      {
+        struct InputEvent kev;
+        memset(&kev, 0, sizeof(kev));
+        int rv = parse_csi_u(st, &kev);
+        if (rv == PARSE_OK) {
+          struct InputEvent *ev = emit(st);
+          *ev = kev;
           st->esc_time = 0;
           continue;
         }

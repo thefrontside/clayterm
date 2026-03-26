@@ -342,6 +342,88 @@ describe("input", () => {
     });
   });
 
+  describe("Kitty keyboard protocol (CSI u)", () => {
+    it("parses character with alt modifier", () => {
+      let result = input.scan(str("\x1b[97;3u")); // a + Alt
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "char",
+        key: "a",
+        alt: true,
+      });
+    });
+
+    it("parses Tab with alt modifier", () => {
+      let result = input.scan(str("\x1b[9;3u"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "Tab",
+        alt: true,
+      });
+    });
+
+    it("parses Enter with ctrl modifier", () => {
+      let result = input.scan(str("\x1b[13;5u"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "Enter",
+        ctrl: true,
+      });
+    });
+
+    it("parses Escape with shift modifier", () => {
+      let result = input.scan(str("\x1b[27;2u"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "Escape",
+        shift: true,
+      });
+    });
+
+    it("parses Backspace without modifiers", () => {
+      let result = input.scan(str("\x1b[127u"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "Backspace",
+      });
+    });
+
+    it("parses combined modifiers", () => {
+      let result = input.scan(str("\x1b[105;7u")); // i + Ctrl+Alt
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "char",
+        key: "i",
+        ctrl: true,
+        alt: true,
+      });
+    });
+
+    it("parses F1 functional key codepoint", () => {
+      let result = input.scan(str("\x1b[57376;2u")); // F1 + Shift
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "F1",
+        shift: true,
+      });
+    });
+
+    it("parses arrow key codepoint", () => {
+      let result = input.scan(str("\x1b[57352;5u")); // ArrowUp + Ctrl
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "key",
+        key: "ArrowUp",
+        ctrl: true,
+      });
+    });
+  });
+
   describe("UTF-8", () => {
     it("parses 2-byte UTF-8 (é)", () => {
       let result = input.scan(bytes(0xc3, 0xa9));

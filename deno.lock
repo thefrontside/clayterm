@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@david/code-block-writer@^13.0.3": "13.0.3",
     "jsr:@deno/dnt@0.42.3": "0.42.3",
+    "jsr:@effection/effection@*": "4.0.2",
     "jsr:@std/assert@^1.0.14": "1.0.18",
     "jsr:@std/assert@^1.0.17": "1.0.18",
     "jsr:@std/expect@1": "1.0.17",
@@ -32,6 +33,9 @@
         "jsr:@std/path@1",
         "jsr:@ts-morph/bootstrap"
       ]
+    },
+    "@effection/effection@4.0.2": {
+      "integrity": "1a3c7ffb6fa30adfd95ad97c2ed0d17900eddbe3ea00d7e1359c9ae147b8f696"
     },
     "@std/assert@1.0.18": {
       "integrity": "270245e9c2c13b446286de475131dc688ca9abcd94fc5db41d43a219b34d1c78",
