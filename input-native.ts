@@ -43,14 +43,29 @@ export const KEY_TAB = 0x09;
 export const KEY_BACKSPACE = 0x7F;
 export const KEY_SPACE = 0x20;
 
-export const OFF_TYPE = 0;
-export const OFF_MOD = 1;
-export const OFF_KEY = 2;
-export const OFF_CH = 4;
-export const OFF_X = 8;
-export const OFF_Y = 12;
-export const OFF_W = 16;
-export const OFF_H = 20;
+import { int32, offsets, struct, uint8, uint16, uint32 } from "./typedef.ts";
+
+const InputEventLayout = struct({
+  type: uint8(),
+  mod: uint8(),
+  key: uint16(),
+  ch: uint32(),
+  x: int32(),
+  y: int32(),
+  w: int32(),
+  h: int32(),
+});
+
+const {
+  type: OFFSET_TYPE,
+  mod: OFFSET_MOD,
+  key: OFFSET_KEY,
+  ch: OFFSET_CH,
+  x: OFFSET_X,
+  y: OFFSET_Y,
+  w: OFFSET_W,
+  h: OFFSET_H,
+} = offsets(InputEventLayout);
 
 export interface NativeInputEvent {
   type: number;
@@ -65,14 +80,14 @@ export interface NativeInputEvent {
 
 export function readEvent(view: DataView, ptr: number): NativeInputEvent {
   return {
-    type: view.getUint8(ptr + OFF_TYPE),
-    mod: view.getUint8(ptr + OFF_MOD),
-    key: view.getUint16(ptr + OFF_KEY, true),
-    ch: view.getUint32(ptr + OFF_CH, true),
-    x: view.getInt32(ptr + OFF_X, true),
-    y: view.getInt32(ptr + OFF_Y, true),
-    w: view.getInt32(ptr + OFF_W, true),
-    h: view.getInt32(ptr + OFF_H, true),
+    type: view.getUint8(ptr + OFFSET_TYPE),
+    mod: view.getUint8(ptr + OFFSET_MOD),
+    key: view.getUint16(ptr + OFFSET_KEY, true),
+    ch: view.getUint32(ptr + OFFSET_CH, true),
+    x: view.getInt32(ptr + OFFSET_X, true),
+    y: view.getInt32(ptr + OFFSET_Y, true),
+    w: view.getInt32(ptr + OFFSET_W, true),
+    h: view.getInt32(ptr + OFFSET_H, true),
   };
 }
 
