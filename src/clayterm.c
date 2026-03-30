@@ -557,6 +557,22 @@ char *output(struct Clayterm *ct) { return ct->out.data; }
 
 int length(struct Clayterm *ct) { return ct->out.length; }
 
+int pointer_over_count(void) {
+  return Clay_GetPointerOverIds().length;
+}
+
+int pointer_over_id_string_length(int index) {
+  Clay_ElementIdArray ids = Clay_GetPointerOverIds();
+  if (index >= ids.length) return 0;
+  return ids.internalArray[index].stringId.length;
+}
+
+int pointer_over_id_string_ptr(int index) {
+  Clay_ElementIdArray ids = Clay_GetPointerOverIds();
+  if (index >= ids.length) return 0;
+  return (int)ids.internalArray[index].stringId.chars;
+}
+
 void measure(int ret, int txt) {
   /* Read Clay_StringSlice from txt address.
    * Clay_StringSlice layout: { int32_t length, const char *chars, ... }

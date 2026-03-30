@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import type { Op } from "./ops.ts";
-import type { Term } from "./term.ts";
+import type { RenderOptions, RenderResult, Term } from "./term.ts";
 
 /* ── Range helpers (match bit-packing in pack()) ──────────────────── */
 
@@ -135,9 +135,9 @@ export function assert(ops: unknown): asserts ops is Op[] {
 
 export function validated(term: Term): Term {
   return {
-    render(ops: Op[]): Uint8Array {
+    render(ops: Op[], options?: RenderOptions): RenderResult {
       assert(ops);
-      return term.render(ops);
+      return term.render(ops, options);
     },
   };
 }

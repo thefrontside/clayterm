@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-fallthrough
-import { each, ensure, main, until } from "effection";
+import { createChannel, each, ensure, main, race, resource, type Stream, until } from "effection";
 import {
   close,
   createTerm,
@@ -9,6 +9,7 @@ import {
   type KeyEvent,
   type Op,
   open,
+  type PointerEvent,
   rgba,
   text,
 } from "../mod.ts";
@@ -27,25 +28,27 @@ let GAP = 1;
 
 interface KeyDef {
   label: string;
+  code: string;
   width?: number;
-  match: (event: InputEvent) => boolean;
 }
 
-function isKeyEvent(e: InputEvent): e is KeyEvent {
+function isKeyEvent(e: InputEvent | PointerEvent): e is KeyEvent {
   return e.type === "keydown" || e.type === "keyrepeat" || e.type === "keyup";
 }
 
-function is(...codes: string[]): (event: InputEvent) => boolean {
-  return (e) =>
-    isKeyEvent(e) && e.type === "keydown" && codes.some((c) => e.code.toUpperCase() === c.toUpperCase());
+function matches(k: KeyDef, event: InputEvent | PointerEvent): boolean {
+  return isKeyEvent(event) && event.type === "keydown" && event.code.toUpperCase() === k.code.toUpperCase();
 }
 
+let hovered = rgba(80, 80, 100);
 
 function key(ops: Op[], k: KeyDef, ctx: AppContext): void {
-  let bg = ctx.event && k.match(ctx.event) ? active : inactive;
+  let pressed = ctx.event && matches(k, ctx.event);
+  let hover = ctx.entered.has(`key:${k.code}`);
+  let bg = pressed ? active : hover ? hovered : inactive;
   let w = k.width ?? KEY_W;
   ops.push(
-    open("box", {
+    open(`key:${k.code}`, {
       layout: {
         width: fixed(w),
         height: grow(),
@@ -54,15 +57,18 @@ function key(ops: Op[], k: KeyDef, ctx: AppContext): void {
         alignY: 2,
       },
       bg,
+      border: hover
+        ? { color: highlight, left: 1, right: 1, top: 1, bottom: 1 }
+        : undefined,
     }),
-    text(k.label, { color: label }),
+    text(k.label, { color: hover ? highlight : label }),
     close(),
   );
 }
 
 function row(ops: Op[], keys: KeyDef[], ctx: AppContext): void {
   ops.push(
-    open("box", { layout: { direction: "ltr", gap: GAP, height: fixed(3) } }),
+    open("", { layout: { direction: "ltr", gap: GAP, height: fixed(3) } }),
   );
   for (let k of keys) {
     key(ops, k, ctx);
@@ -72,106 +78,106 @@ function row(ops: Op[], keys: KeyDef[], ctx: AppContext): void {
 
 function spacer(ops: Op[], width: number): void {
   ops.push(
-    open("box", { layout: { width: fixed(width), height: grow() } }),
+    open("", { layout: { width: fixed(width), height: grow() } }),
     close(),
   );
 }
 
 function mainKeys(ops: Op[], ctx: AppContext): void {
   ops.push(
-    open("box", { layout: { direction: "ttb", gap: GAP } }),
+    open("main-keys", { layout: { direction: "ttb", gap: GAP } }),
   );
 
   row(ops, [
-    { label: "Esc", width: 11, match: is("Escape") },
-    { label: "F1", match: is("F1") },
-    { label: "F2", match: is("F2") },
-    { label: "F3", match: is("F3") },
-    { label: "F4", match: is("F4") },
-    { label: "F5", match: is("F5") },
-    { label: "F6", match: is("F6") },
-    { label: "F7", match: is("F7") },
-    { label: "F8", match: is("F8") },
-    { label: "F9", match: is("F9") },
-    { label: "F10", match: is("F10") },
-    { label: "F11", match: is("F11") },
-    { label: "F12", match: is("F12") },
+    { label: "Esc", code: "Escape", width: 11 },
+    { label: "F1", code: "F1" },
+    { label: "F2", code: "F2" },
+    { label: "F3", code: "F3" },
+    { label: "F4", code: "F4" },
+    { label: "F5", code: "F5" },
+    { label: "F6", code: "F6" },
+    { label: "F7", code: "F7" },
+    { label: "F8", code: "F8" },
+    { label: "F9", code: "F9" },
+    { label: "F10", code: "F10" },
+    { label: "F11", code: "F11" },
+    { label: "F12", code: "F12" },
   ], ctx);
 
   row(ops, [
-    { label: "`", match: is("`") },
-    { label: "1", match: is("1") },
-    { label: "2", match: is("2") },
-    { label: "3", match: is("3") },
-    { label: "4", match: is("4") },
-    { label: "5", match: is("5") },
-    { label: "6", match: is("6") },
-    { label: "7", match: is("7") },
-    { label: "8", match: is("8") },
-    { label: "9", match: is("9") },
-    { label: "0", match: is("0") },
-    { label: "-", match: is("-") },
-    { label: "=", match: is("=") },
-    { label: "Bksp", width: 9, match: is("Backspace") },
+    { label: "`", code: "Backquote" },
+    { label: "1", code: "Digit1" },
+    { label: "2", code: "Digit2" },
+    { label: "3", code: "Digit3" },
+    { label: "4", code: "Digit4" },
+    { label: "5", code: "Digit5" },
+    { label: "6", code: "Digit6" },
+    { label: "7", code: "Digit7" },
+    { label: "8", code: "Digit8" },
+    { label: "9", code: "Digit9" },
+    { label: "0", code: "Digit0" },
+    { label: "-", code: "Minus" },
+    { label: "=", code: "Equal" },
+    { label: "Bksp", code: "Backspace", width: 9 },
   ], ctx);
 
   row(ops, [
-    { label: "Tab", width: 7, match: is("Tab") },
-    { label: "Q", match: is("q") },
-    { label: "W", match: is("w") },
-    { label: "E", match: is("e") },
-    { label: "R", match: is("r") },
-    { label: "T", match: is("t") },
-    { label: "Y", match: is("y") },
-    { label: "U", match: is("u") },
-    { label: "I", match: is("i") },
-    { label: "O", match: is("o") },
-    { label: "P", match: is("p") },
-    { label: "[", match: is("[") },
-    { label: "]", match: is("]") },
-    { label: "\\", width: 7, match: is("\\") },
+    { label: "Tab", code: "Tab", width: 7 },
+    { label: "Q", code: "q" },
+    { label: "W", code: "w" },
+    { label: "E", code: "e" },
+    { label: "R", code: "r" },
+    { label: "T", code: "t" },
+    { label: "Y", code: "y" },
+    { label: "U", code: "u" },
+    { label: "I", code: "i" },
+    { label: "O", code: "o" },
+    { label: "P", code: "p" },
+    { label: "[", code: "BracketLeft" },
+    { label: "]", code: "BracketRight" },
+    { label: "\\", code: "Backslash", width: 7 },
   ], ctx);
 
   row(ops, [
-    { label: "Caps", width: 9, match: is("CapsLock") },
-    { label: "A", match: is("a") },
-    { label: "S", match: is("s") },
-    { label: "D", match: is("d") },
-    { label: "F", match: is("f") },
-    { label: "G", match: is("g") },
-    { label: "H", match: is("h") },
-    { label: "J", match: is("j") },
-    { label: "K", match: is("k") },
-    { label: "L", match: is("l") },
-    { label: ";", match: is(";") },
-    { label: "'", match: is("'") },
-    { label: "Enter", width: 10, match: is("Enter") },
+    { label: "Caps", code: "CapsLock", width: 9 },
+    { label: "A", code: "a" },
+    { label: "S", code: "s" },
+    { label: "D", code: "d" },
+    { label: "F", code: "f" },
+    { label: "G", code: "g" },
+    { label: "H", code: "h" },
+    { label: "J", code: "j" },
+    { label: "K", code: "k" },
+    { label: "L", code: "l" },
+    { label: ";", code: "Semicolon" },
+    { label: "'", code: "Quote" },
+    { label: "Enter", code: "Enter", width: 10 },
   ], ctx);
 
   row(ops, [
-    { label: "Shift", width: 11, match: is("ShiftLeft") },
-    { label: "Z", match: is("z") },
-    { label: "X", match: is("x") },
-    { label: "C", match: is("c") },
-    { label: "V", match: is("v") },
-    { label: "B", match: is("b") },
-    { label: "N", match: is("n") },
-    { label: "M", match: is("m") },
-    { label: ",", match: is(",") },
-    { label: ".", match: is(".") },
-    { label: "/", match: is("/") },
-    { label: "Shift", width: 13, match: is("ShiftRight") },
+    { label: "Shift", code: "ShiftLeft", width: 11 },
+    { label: "Z", code: "z" },
+    { label: "X", code: "x" },
+    { label: "C", code: "c" },
+    { label: "V", code: "v" },
+    { label: "B", code: "b" },
+    { label: "N", code: "n" },
+    { label: "M", code: "m" },
+    { label: ",", code: "Comma" },
+    { label: ".", code: "Period" },
+    { label: "/", code: "Slash" },
+    { label: "Shift", code: "ShiftRight", width: 13 },
   ], ctx);
 
   row(ops, [
-    { label: "Ctrl", width: 7, match: is("ControlLeft") },
-    { label: "Win", width: 6, match: is("SuperLeft") },
-    { label: "Alt", width: 6, match: is("AltLeft") },
-    { label: "", width: 33, match: is(" ") },
-    { label: "Alt", width: 6, match: is("AltRight") },
-    { label: "Win", width: 6, match: is("SuperRight") },
-    { label: "Menu", width: 6, match: is() },
-    { label: "Ctrl", width: 7, match: is("ControlRight") },
+    { label: "Ctrl", code: "ControlLeft", width: 7 },
+    { label: "Win", code: "SuperLeft", width: 6 },
+    { label: "Alt", code: "AltLeft", width: 6 },
+    { label: "", code: "Space", width: 33 },
+    { label: "Alt", code: "AltRight", width: 6 },
+    { label: "Win", code: "SuperRight", width: 6 },
+    { label: "Menu", code: "Menu", width: 6 },
+    { label: "Ctrl", code: "ControlRight", width: 7 },
   ], ctx);
 
   ops.push(close());
@@ -179,42 +185,42 @@ function mainKeys(ops: Op[], ctx: AppContext): void {
 
 function navKeys(ops: Op[], ctx: AppContext): void {
   ops.push(
-    open("box", { layout: { direction: "ttb", gap: GAP } }),
+    open("nav-keys", { layout: { direction: "ttb", gap: GAP } }),
   );
 
   // top section: Ins/Home/PgUp, Del/End/PgDn
   row(ops, [
-    { label: "Ins", width: 6, match: is("Insert") },
-    { label: "Home", width: 6, match: is("Home") },
-    { label: "PgUp", width: 6, match: is("PageUp") },
+    { label: "Ins", code: "Insert", width: 6 },
+    { label: "Home", code: "Home", width: 6 },
+    { label: "PgUp", code: "PageUp", width: 6 },
   ], ctx);
 
   row(ops, [
-    { label: "Del", width: 6, match: is("Delete") },
-    { label: "End", width: 6, match: is("End") },
-    { label: "PgDn", width: 6, match: is("PageDown") },
+    { label: "Del", code: "Delete", width: 6 },
+    { label: "End", code: "End", width: 6 },
+    { label: "PgDn", code: "PageDown", width: 6 },
   ], ctx);
 
   // gap before arrows
   ops.push(
-    open("box", { layout: { height: fixed(3) } }),
+    open("", { layout: { height: fixed(3) } }),
     close(),
   );
 
   // arrow up
   ops.push(
-    open("box", { layout: { direction: "ltr", gap: GAP, height: fixed(3) } }),
+    open("", { layout: { direction: "ltr", gap: GAP, height: fixed(3) } }),
   );
   spacer(ops, 6);
-  key(ops, { label: "\u2191", width: 6, match: is("ArrowUp") }, ctx);
+  key(ops, { label: "\u2191", code: "ArrowUp", width: 6 }, ctx);
   spacer(ops, 6);
   ops.push(close());
 
   // arrow left/down/right
   row(ops, [
-    { label: "\u2190", width: 6, match: is("ArrowLeft") },
-    { label: "\u2193", width: 6, match: is("ArrowDown") },
-    { label: "\u2192", width: 6, match: is("ArrowRight") },
+    { label: "\u2190", code: "ArrowLeft", width: 6 },
+    { label: "\u2193", code: "ArrowDown", width: 6 },
+    { label: "\u2192", code: "ArrowRight", width: 6 },
   ], ctx);
 
   ops.push(close());
@@ -222,64 +228,64 @@ function navKeys(ops: Op[], ctx: AppContext): void {
 
 function numpad(ops: Op[], ctx: AppContext): void {
   ops.push(
-    open("box", { layout: { direction: "ttb", gap: GAP } }),
+    open("numpad", { layout: { direction: "ttb", gap: GAP } }),
   );
 
   row(ops, [
-    { label: "Num", width: 6, match: is("NumLock") },
-    { label: "/", width: 6, match: is("NumpadDivide") },
-    { label: "*", width: 6, match: is("NumpadMultiply") },
-    { label: "-", width: 6, match: is("NumpadSubtract") },
+    { label: "Num", code: "NumLock", width: 6 },
+    { label: "/", code: "NumpadDivide", width: 6 },
+    { label: "*", code: "NumpadMultiply", width: 6 },
+    { label: "-", code: "NumpadSubtract", width: 6 },
   ], ctx);
 
   // rows 2-3 grouped horizontally so + spans both
   ops.push(
-    open("box", { layout: { direction: "ltr", gap: GAP } }),
+    open("", { layout: { direction: "ltr", gap: GAP } }),
   );
 
   // left side: 7-8-9 and 4-5-6 stacked
   ops.push(
-    open("box", { layout: { direction: "ttb", gap: GAP } }),
+    open("", { layout: { direction: "ttb", gap: GAP } }),
   );
   row(ops, [
-    { label: "7", width: 6, match: is("Numpad7") },
-    { label: "8", width: 6, match: is("Numpad8") },
-    { label: "9", width: 6, match: is("Numpad9") },
+    { label: "7", code: "Numpad7", width: 6 },
+    { label: "8", code: "Numpad8", width: 6 },
+    { label: "9", code: "Numpad9", width: 6 },
   ], ctx);
   row(ops, [
-    { label: "4", width: 6, match: is("Numpad4") },
-    { label: "5", width: 6, match: is("Numpad5") },
-    { label: "6", width: 6, match: is("Numpad6") },
+    { label: "4", code: "Numpad4", width: 6 },
+    { label: "5", code: "Numpad5", width: 6 },
+    { label: "6", code: "Numpad6", width: 6 },
   ], ctx);
   ops.push(close());
 
   // + spanning both rows
-  key(ops, { label: "+", match: is("NumpadAdd") }, ctx);
+  key(ops, { label: "+", code: "NumpadAdd" }, ctx);
 
   ops.push(close());
 
   // rows 4-5 grouped horizontally so Enter spans both
   ops.push(
-    open("box", { layout: { direction: "ltr", gap: GAP } }),
+    open("", { layout: { direction: "ltr", gap: GAP } }),
   );
 
   // left side: 1-2-3 and 0-. stacked
   ops.push(
-    open("box", { layout: { direction: "ttb", gap: GAP } }),
+    open("", { layout: { direction: "ttb", gap: GAP } }),
   );
   row(ops, [
-    { label: "1", width: 6, match: is("Numpad1") },
-    { label: "2", width: 6, match: is("Numpad2") },
-    { label: "3", width: 6, match: is("Numpad3") },
+    { label: "1", code: "Numpad1", width: 6 },
+    { label: "2", code: "Numpad2", width: 6 },
+    { label: "3", code: "Numpad3", width: 6 },
   ], ctx);
   row(ops, [
-    { label: "0", width: 13, match: is("Numpad0") },
-    { label: ".", width: 6, match: is("NumpadDecimal") },
+    { label: "0", code: "Numpad0", width: 13 },
+    { label: ".", code: "NumpadDecimal", width: 6 },
   ], ctx);
   ops.push(close());
 
   // Enter spanning both rows
-  key(ops, { label: "Ent", match: is("NumpadEnter") }, ctx);
+  key(ops, { label: "Ent", code: "NumpadEnter" }, ctx);
 
   ops.push(close());
 
@@ -291,7 +297,7 @@ function toggle(ops: Op[], enabled: boolean, name: string): void {
     ? "\u25cf\u2500\u2500\u2500"
     : "\u2500\u2500\u2500\u25cb";
   ops.push(
-    open("box", {
+    open("", {
       layout: {
         direction: "ltr",
         height: fixed(1),
@@ -304,7 +310,7 @@ function toggle(ops: Op[], enabled: boolean, name: string): void {
   );
 }
 
-let flagNames: (keyof Omit<AppContext, "mode" | "event">)[] = [
+let flagNames: (keyof Omit<AppContext, "mode" | "event" | "logged" | "log" | "entered">)[] = [
   "Disambiguate escape codes",
   "Report event types",
   "Report alternate keys",
@@ -312,32 +318,81 @@ let flagNames: (keyof Omit<AppContext, "mode" | "event">)[] = [
   "Report associated text",
 ];
 
-function flagPanel(ops: Op[], ctx: AppContext): void {
+let logEntries: { key: string; name: keyof EventFilter }[] = [
+  { key: "a", name: "keydown" },
+  { key: "b", name: "keyup" },
+  { key: "c", name: "keyrepeat" },
+  { key: "d", name: "mousedown" },
+  { key: "e", name: "mouseup" },
+  { key: "f", name: "mousemove" },
+  { key: "g", name: "wheel" },
+  { key: "h", name: "resize" },
+  { key: "i", name: "pointerenter" },
+  { key: "j", name: "pointerleave" },
+  { key: "k", name: "pointerclick" },
+];
+
+function logToggle(ops: Op[], entries: typeof logEntries, ctx: AppContext): void {
+  for (let entry of entries) {
+    ops.push(
+      open(`log:${entry.name}`, { layout: { direction: "ltr", height: fixed(1), gap: 1 } }),
+    );
+    ops.push(text(`${entry.key}.`, { color: dim }));
+    toggle(ops, ctx.log[entry.name], entry.name);
+    ops.push(close());
+  }
+}
+
+function configPanel(ops: Op[], ctx: AppContext): void {
   let color = ctx.mode === "config" ? active : rgba(0, 0, 0, 0);
-  ops.push(open("box", {
+  ops.push(open("config", {
     layout: {
-      direction: "ttb",
-      gap: 1,
+      direction: "ltr",
+      gap: 3,
       padding: { left: 1, right: 1, top: 1, bottom: 1 },
     },
     border: { color, left: 1, right: 1, top: 1, bottom: 1 },
   }));
 
+  // keyboard protocol level column
+  ops.push(open("protocol-level", { layout: { direction: "ttb", gap: 1 } }));
   ops.push(
-    open("box", { layout: { height: fixed(1) } }),
+    open("", { layout: { height: fixed(1) } }),
     text("Keyboard Protocol Level", { color: highlight }),
     close(),
   );
-
   for (let i = 0; i < flagNames.length; i++) {
     let name = flagNames[i];
     ops.push(
-      open("box", { layout: { direction: "ltr", height: fixed(1), gap: 1 } }),
+      open(`flag:${name}`, { layout: { direction: "ltr", height: fixed(1), gap: 1 } }),
     );
     ops.push(text(`${i + 1}.`, { color: dim }));
     toggle(ops, ctx[name], name);
     ops.push(close());
   }
+  ops.push(close());
+
+  // log events column 1
+  let col1 = logEntries.slice(0, 6);
+  let col2 = logEntries.slice(6);
+
+  ops.push(open("log-events", { layout: { direction: "ttb", gap: 1 } }));
+  ops.push(
+    open("", { layout: { height: fixed(1) } }),
+    text("Log Events", { color: highlight }),
+    close(),
+  );
+  logToggle(ops, col1, ctx);
+  ops.push(close());
+
+  // log events column 2
+  ops.push(open("log-events-2", { layout: { direction: "ttb", gap: 1 } }));
+  ops.push(
+    open("", { layout: { height: fixed(1) } }),
+    close(),
+  );
+  logToggle(ops, col2, ctx);
+  ops.push(close());
 
   ops.push(close());
 }
@@ -347,7 +402,7 @@ function keyboard(ctx: AppContext): Op[] {
 
   // root
   ops.push(
-    open("box", {
+    open("root", {
       layout: {
         width: grow(),
         height: grow(),
@@ -361,62 +416,65 @@ function keyboard(ctx: AppContext): Op[] {
 
   // keyboard + toggles wrapper
   ops.push(
-    open("box", { layout: { direction: "ttb" } }),
+    open("", { layout: { direction: "ttb" } }),
   );
 
-  // mode badge
+  // badges + config row
+  ops.push(
+    open("", {
+      layout: {
+        width: grow(),
+        direction: "ltr",
+        alignY: 0,
+        padding: { bottom: 1 },
+      },
+    }),
+  );
+
+  // badges column (left, bottom-aligned)
   let badgeBg = ctx.mode === "input" ? rgba(40, 120, 200) : rgba(200, 120, 40);
   let badgeLabel = ctx.mode === "input" ? "input" : "config";
   let badgeHint = ctx.mode === "input"
     ? "Ctrl+X Ctrl+X to enter config"
     : "Set flags with keys [0-5], Enter to save";
+  let mouseBg = ctx["Capture mouse events"] ? rgba(40, 180, 80) : rgba(80, 80, 80);
+  let mouseLabel = ctx["Capture mouse events"] ? "capture" : "system";
   ops.push(
-    open("box", { layout: { direction: "ltr", height: fixed(1), padding: { bottom: 1 } } }),
-    open("box", { layout: { padding: { left: 1, right: 1 } }, bg: rgba(60, 60, 60) }),
+    open("badges", { layout: { direction: "ttb", gap: 1, padding: { top: 1 } } }),
+    open("badge:mode", { layout: { direction: "ltr", height: fixed(1), padding: { bottom: 1 } } }),
+    open("", { layout: { padding: { left: 1, right: 1 } }, bg: rgba(60, 60, 60) }),
     text("mode", { color: rgba(220, 220, 220) }),
     close(),
-    open("box", { layout: { padding: { left: 1, right: 1 } }, bg: badgeBg }),
+    open("", { layout: { padding: { left: 1, right: 1 } }, bg: badgeBg }),
     text(badgeLabel, { color: rgba(255, 255, 255) }),
     close(),
     text(` ${badgeHint}`, { color: dim }),
     close(),
-    open("box", { layout: { height: fixed(1) } }),
-    close(),
-  );
-
-  // mouse capture badge
-  let mouseBg = ctx["Capture mouse events"] ? rgba(40, 180, 80) : rgba(80, 80, 80);
-  let mouseLabel = ctx["Capture mouse events"] ? "capture" : "system";
-  ops.push(
-    open("box", { layout: { direction: "ltr", height: fixed(1), padding: { bottom: 1 } } }),
-    open("box", { layout: { padding: { left: 1, right: 1 } }, bg: rgba(60, 60, 60) }),
+    open("badge:mouse", { layout: { direction: "ltr", height: fixed(1) } }),
+    open("", { layout: { padding: { left: 1, right: 1 } }, bg: rgba(60, 60, 60) }),
     text("mouse", { color: rgba(220, 220, 220) }),
     close(),
-    open("box", { layout: { padding: { left: 1, right: 1 } }, bg: mouseBg }),
+    open("", { layout: { padding: { left: 1, right: 1 } }, bg: mouseBg }),
     text(mouseLabel, { color: rgba(255, 255, 255) }),
     close(),
     text(" Ctrl+X Ctrl+M to toggle", { color: dim }),
     close(),
+    close(),
   );
 
-  // toggles right-aligned above keyboard
+  // config panel (right)
   ops.push(
-    open("box", {
-      layout: {
-        width: grow(),
-        direction: "ltr",
-        alignX: 1,
-        padding: { bottom: 1 },
-      },
-    }),
+    open("", { layout: { width: grow(), direction: "ltr", alignX: 1 } }),
   );
-  flagPanel(ops, ctx);
+  configPanel(ops, ctx);
   ops.push(close());
+
+  ops.push(close()); // badges + config row
 
   // three keyboard groups side by side, bottom-aligned
   let kbColor = ctx.mode === "input" ? active : rgba(0, 0, 0, 0);
   ops.push(
-    open("box", {
+    open("keyboard", {
       layout: {
         direction: "ltr",
         gap: 3,
@@ -437,8 +495,8 @@ function keyboard(ctx: AppContext): Op[] {
 
   // raw event display
   ops.push(
-    open("box", { layout: { height: fixed(1), padding: { top: 1 } } }),
-    text(ctx.event ? JSON.stringify(ctx.event) : "Press any key...", {
+    open("event-log", { layout: { height: fixed(1), padding: { top: 1 } } }),
+    text(ctx.logged ? JSON.stringify(ctx.logged) : "Press any key...", {
       color: highlight,
     }),
     close(),
@@ -486,36 +544,83 @@ await main(function* () {
 
   let context = modality.next().value;
 
-  Deno.stdout.writeSync(term.render(keyboard(context)));
+  Deno.stdout.writeSync(ttyFlags(context));
 
-  for (let event of yield* each(input)) {    
+  let { output } = term.render(keyboard(context));
+
+  Deno.stdout.writeSync(output);
+
+  let pointer = {
+    events: createChannel<PointerEvent, void>(),
+    state: undefined as { x: number; y: number; down: boolean} | undefined,
+  };
+
+  for (let event of yield* each(merge(input, pointer.events))) {
     if (event.type === "keydown" && event.ctrl && event.key === "c") {
       break;
     }
-       
+    if (event.type === "pointerenter") {
+      context.entered.add(event.id);
+    }
+    if (event.type === "pointerleave") {
+      context.entered.delete(event.id);
+    }
+
     context = modality.next(event).value;
+    if (context.event && context.log[context.event.type as keyof EventFilter]) {
+      context = { ...context, logged: context.event };
+    }
 
     Deno.stdout.writeSync(ttyFlags(context));
 
-    Deno.stdout.writeSync(term.render(keyboard(context)));
+    if (context["Capture mouse events"]) {
+      if ("x" in event) {
+        pointer.state = { x: event.x, y: event.y, down: event.type === "mousedown" };
+      }
+    } else {
+      pointer.state = undefined;
+    }
+
+    let { output, events } = term.render(keyboard(context), { pointer: pointer.state });
+
+    for (let event of events) {
+      yield* pointer.events.send(event);
+    }
+    
+    Deno.stdout.writeSync(output);
 
     yield* each.next();
   }
 });
 
-function* recognizer(): Iterator<AppContext, never, InputEvent> {
+function* recognizer(): Iterator<AppContext, never, InputEvent | PointerEvent> {
   let current: AppContext = {
     mode: "input",
     "Disambiguate escape codes": true,
     "Report event types": true,
-    "Report alternate keys": false,
-    "Report all keys as escapes": false,
-    "Report associated text": false,
-    "Capture mouse events": false,
+    "Report alternate keys": true,
+    "Report all keys as escapes": true,
+    "Report associated text": true,
+    "Capture mouse events": true,
+    log: {
+      keydown: true,
+      keyrepeat: false,
+      keyup: false,
+      mousedown: false,
+      mouseup: false,
+      mousemove: false,
+      wheel: true,
+      resize: true,
+      pointerenter: false,
+      pointerleave: false,
+      pointerclick: true,
+    },
+    entered: new Set(),
     event: null,
+    logged: null,
   };
 
-  let event: InputEvent = yield current;
+  let event= yield current;
 
   let mode = inputmode({ ...current, event });
 
@@ -524,7 +629,7 @@ function* recognizer(): Iterator<AppContext, never, InputEvent> {
   }
 }
 
-type Mode = Iterable<AppContext, Mode, InputEvent>;
+type Mode = Iterable<AppContext, Mode, InputEvent | PointerEvent>;
 
 function* inputmode(context: AppContext): Mode {
   context = { ...context, mode: "input" };
@@ -564,7 +669,13 @@ function* configmode(context: AppContext): Mode {
     if (event.type === "keydown" && event.key === "Enter") {
       return inputmode({...context, event: null });
     }
-    if (event.type === "keydown" && "012345".indexOf(event.key) >= 0) {
+    if (event.type === "keydown") {
+      let k = (event as KeyEvent).key;
+      let entry = logEntries.find((e) => e.key === k);
+      if (entry) {
+        context = { ...context, log: { ...context.log, [entry.name]: !context.log[entry.name] } };
+      }
+      if ("012345".indexOf(event.key) >= 0) {
       context = { ...context };
       context["Report associated text"] = false;
       context["Report all keys as escapes"] = false;
@@ -586,16 +697,49 @@ function* configmode(context: AppContext): Mode {
         case "0":
           break;
       }
+      }
     }
     event = yield context;
   }
 }
 
 
+function merge<A,B, TClose>(a: Stream<A,TClose>, b: Stream<B,TClose>): Stream<A|B, TClose> {
+  return resource(function*(provide) {
+    let subscription = {
+      a: yield* a,
+      b: yield* b,
+    }
+
+    return yield* provide({
+      *next() {
+        return yield* race([subscription.a.next(),subscription.b.next()]);
+      },
+    })
+  });  
+}
+
+
+type EventFilter = {
+  keydown: boolean;
+  keyrepeat: boolean;
+  keyup: boolean;
+  mousedown: boolean;
+  mouseup: boolean;
+  mousemove: boolean;
+  wheel: boolean;
+  resize: boolean;
+  pointerenter: boolean;
+  pointerleave: boolean;
+  pointerclick: boolean;
+};
 
 type AppContext = {
   mode: "input" | "config";
-  event: InputEvent | null;
+  event: InputEvent | PointerEvent | null;
+  logged: InputEvent | PointerEvent | null;
+  log: EventFilter;
+  entered: Set<string>;
   ["Disambiguate escape codes"]: boolean;
   ["Report event types"]: boolean;
   ["Report alternate keys"]: boolean;

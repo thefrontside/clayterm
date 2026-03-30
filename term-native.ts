@@ -5,6 +5,8 @@ export interface Native {
   reduce(ct: number, buf: number, len: number): void;
   output(ct: number): number;
   length(ct: number): number;
+  setPointer(x: number, y: number, down: boolean): void;
+  getPointerOverIds(): string[];
 }
 
 import { compiled } from "./wasm.ts";
@@ -45,6 +47,10 @@ export async function createTermNative(w: number, h: number): Promise<Native> {
     reduce(ct: number, buf: number, len: number): void;
     output(ct: number): number;
     length(ct: number): number;
+    Clay_SetPointerState(vec: number, down: number): void;
+    pointer_over_count(): number;
+    pointer_over_id_string_length(index: number): number;
+    pointer_over_id_string_ptr(index: number): number;
   };
 
   let heap = ct.__heap_base.value as number;
@@ -68,5 +74,23 @@ export async function createTermNative(w: number, h: number): Promise<Native> {
     reduce: ct.reduce,
     output: ct.output,
     length: ct.length,
+    setPointer(x: number, y: number, down: boolean) {
+      let view = new DataView(memory.buffer);
+      view.setFloat32(opsBuf, x, true);
+      view.setFloat32(opsBuf + 4, y, true);
+      ct.Clay_SetPointerState(opsBuf, down ? 1 : 0);
+    },
+    getPointerOverIds(): string[] {
+      let decoder = new TextDecoder();
+      let count = ct.pointer_over_count();
+      let ids: string[] = [];
+      for (let i = 0; i < count; i++) {
+        let len = ct.pointer_over_id_string_length(i);
+        if (len === 0) continue;
+        let ptr = ct.pointer_over_id_string_ptr(i);
+        ids.push(decoder.decode(new Uint8Array(memory.buffer, ptr, len)));
+      }
+      return ids;
+    },
   };
 }

@@ -265,13 +265,16 @@ export interface ResizeEvent {
   height: number;
 }
 
+import type { PointerEvent } from "./term.ts";
+
 export type InputEvent =
   | KeyEvent
   | MouseDownEvent
   | MouseUpEvent
   | MouseMoveEvent
   | WheelEvent
-  | ResizeEvent;
+  | ResizeEvent
+  | PointerEvent;
 
 /**
  * Result of a single scan() call.

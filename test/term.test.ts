@@ -20,7 +20,7 @@ describe("term", () => {
         }),
         text("Hello, World!"),
         close(),
-      ])),
+      ]).output),
       40,
       10,
     );
@@ -36,7 +36,7 @@ describe("term", () => {
       }),
       text("hi"),
       close(),
-    ]));
+    ]).output);
 
     // the SGR active when "h" is emitted should include the
     // parent's red background (48;2;255;0;0), not terminal default
@@ -65,7 +65,7 @@ describe("term", () => {
         }),
         text("padded"),
         close(),
-      ])),
+      ]).output),
       40,
       10,
     );
