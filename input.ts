@@ -163,10 +163,31 @@ export interface KeyUp extends KeyInfo {
 export type KeyEvent = KeyDown | KeyRepeat | KeyUp;
 
 /**
- * A mouse button was pressed or released
+ * A mouse button was pressed.
  */
-export interface MouseEvent extends KeyModifiers {
-  type: "mouse";
+export interface MouseDownEvent extends KeyModifiers {
+  type: "mousedown";
+  /**
+   * Which mouse button triggered this event.
+   */
+  button: "left" | "right" | "middle";
+
+  /**
+   * `x` coordinate of this event
+   */
+  x: number;
+
+  /**
+   * `y` coordinate of this event
+   */
+  y: number;
+}
+
+/**
+ * A mouse button was released.
+ */
+export interface MouseUpEvent extends KeyModifiers {
+  type: "mouseup";
   /**
    * Which mouse button triggered this event.
    *
@@ -185,18 +206,13 @@ export interface MouseEvent extends KeyModifiers {
    * `y` coordinate of this event
    */
   y: number;
-
-  /**
-   * True if the event represents a button being released.
-   */
-  release?: true;
 }
 
 /**
  * Mouse movement while a button is held.
  */
-export interface DragEvent extends KeyModifiers {
-  type: "drag";
+export interface MouseMoveEvent extends KeyModifiers {
+  type: "mousemove";
   /**
    * Which mouse button is being held during the drag.
    */
@@ -251,8 +267,9 @@ export interface ResizeEvent {
 
 export type InputEvent =
   | KeyEvent
-  | MouseEvent
-  | DragEvent
+  | MouseDownEvent
+  | MouseUpEvent
+  | MouseMoveEvent
   | WheelEvent
   | ResizeEvent;
 
@@ -441,7 +458,7 @@ const KEY_NAMES = new Map<number, string>([
   [KEY_SCROLL_LOCK, "ScrollLock"],
 ]);
 
-const BUTTON_NAMES = new Map<number, MouseEvent["button"]>([
+const BUTTON_NAMES = new Map<number, MouseUpEvent["button"]>([
   [KEY_MOUSE_LEFT, "left"],
   [KEY_MOUSE_RIGHT, "right"],
   [KEY_MOUSE_MIDDLE, "middle"],
@@ -526,7 +543,7 @@ function mapEvent(native: NativeInputEvent): InputEvent {
       if (native.mod & MOD_MOTION) {
         let button = BUTTON_NAMES.get(native.key) ?? "left";
         return {
-          type: "drag" as const,
+          type: "mousemove" as const,
           button: button === "release" ? "left" as const : button,
           x: native.x,
           y: native.y,
@@ -534,16 +551,23 @@ function mapEvent(native: NativeInputEvent): InputEvent {
         };
       }
       let button = BUTTON_NAMES.get(native.key) ?? "left";
-      let m = mods(native);
-      let ev: MouseEvent = {
-        type: "mouse",
-        button,
-        x: native.x,
-        y: native.y,
-        ...m,
-      };
-      if (native.mod & MOD_RELEASE) ev.release = true;
-      return ev;
+      if (native.mod & MOD_RELEASE) {
+        return {
+          type: "mouseup" as const,
+          button,
+          x: native.x,
+          y: native.y,
+          ...mods(native),
+        };
+      } else {
+        return {
+          type: "mousedown" as const,
+          button: button as MouseDownEvent["button"],
+          x: native.x,
+          y: native.y,
+          ...mods(native),
+        };
+      }
     }
     case EVENT_RESIZE: {
       return { type: "resize", width: native.w, height: native.h };

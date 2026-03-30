@@ -61,6 +61,15 @@ static struct InputEvent *emit(struct InputState *st) {
 #define MOUSE_BUTTON_RELEASE 3
 #define MOUSE_WHEEL_BIT 64
 
+static uint8_t mouse_mods(int b) {
+  uint8_t m = 0;
+  if (b & 4) m |= MOD_SHIFT;
+  if (b & 8) m |= MOD_ALT;
+  if (b & 16) m |= MOD_CTRL;
+  if (b & 32) m |= MOD_MOTION;
+  return m;
+}
+
 static uint16_t mouse_button(int b) {
   switch (b & MOUSE_BUTTON_MASK) {
   case MOUSE_BUTTON_LEFT:
@@ -94,7 +103,7 @@ static int parse_mouse_vt200(struct InputState *st, struct InputEvent *ev) {
   int b = st->buf[3] - 0x20;
   ev->type = EVENT_MOUSE;
   ev->key = mouse_button(b);
-  ev->mod = (b & 32) ? MOD_MOTION : 0;
+  ev->mod = mouse_mods(b);
   if (ev->key == KEY_MOUSE_RELEASE)
     ev->mod |= MOD_RELEASE;
   ev->x = ((uint8_t)st->buf[4]) - 0x21;
@@ -139,7 +148,7 @@ static int parse_mouse_sgr(struct InputState *st, struct InputEvent *ev) {
 
   ev->type = EVENT_MOUSE;
   ev->key = mouse_button(num[0]);
-  ev->mod = (num[0] & 32) ? MOD_MOTION : 0;
+  ev->mod = mouse_mods(num[0]);
   if (trail == 'm')
     ev->mod |= MOD_RELEASE;
   ev->x = (num[1] - 1 < 0) ? 0 : num[1] - 1;
@@ -185,7 +194,7 @@ static int parse_mouse_urxvt(struct InputState *st, struct InputEvent *ev) {
   int b = num[0] - 0x20;
   ev->type = EVENT_MOUSE;
   ev->key = mouse_button(b);
-  ev->mod = (b & 32) ? MOD_MOTION : 0;
+  ev->mod = mouse_mods(b);
   if (ev->key == KEY_MOUSE_RELEASE)
     ev->mod |= MOD_RELEASE;
   ev->x = (num[1] - 1 < 0) ? 0 : num[1] - 1;

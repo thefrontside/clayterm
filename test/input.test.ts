@@ -160,7 +160,7 @@ describe("input", () => {
       let result = input.scan(str("\x1b[<0;35;12M"));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mousedown",
         button: "left",
         x: 34,
         y: 11,
@@ -171,11 +171,10 @@ describe("input", () => {
       let result = input.scan(str("\x1b[<0;10;5m"));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mouseup",
         button: "left",
         x: 9,
         y: 4,
-        release: true,
       });
     });
 
@@ -183,11 +182,10 @@ describe("input", () => {
       let result = input.scan(str("\x1b[<2;10;5m"));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mouseup",
         button: "right",
         x: 9,
         y: 4,
-        release: true,
       });
     });
 
@@ -195,11 +193,10 @@ describe("input", () => {
       let result = input.scan(str("\x1b[<1;10;5m"));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mouseup",
         button: "middle",
         x: 9,
         y: 4,
-        release: true,
       });
     });
 
@@ -208,11 +205,10 @@ describe("input", () => {
       let result = input.scan(bytes(0x1b, 0x5b, 0x4d, 0x23, 0x2b, 0x26));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mouseup",
         button: "release",
         x: 10,
         y: 5,
-        release: true,
       });
     });
 
@@ -243,10 +239,63 @@ describe("input", () => {
       let result = input.scan(bytes(0x1b, 0x5b, 0x4d, 0x20, 0x2b, 0x26));
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
-        type: "mouse",
+        type: "mousedown",
         button: "left",
         x: 10,
         y: 5,
+      });
+    });
+
+    it("parses SGR mouse press with shift", () => {
+      // btn=4 (shift bit) => left + shift
+      let result = input.scan(str("\x1b[<4;10;5M"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "mousedown",
+        button: "left",
+        x: 9,
+        y: 4,
+        shift: true,
+      });
+    });
+
+    it("parses SGR mouse press with ctrl", () => {
+      // btn=16 (ctrl bit) => left + ctrl
+      let result = input.scan(str("\x1b[<16;10;5M"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "mousedown",
+        button: "left",
+        x: 9,
+        y: 4,
+        ctrl: true,
+      });
+    });
+
+    it("parses SGR mouse press with alt", () => {
+      // btn=8 (alt bit) => left + alt
+      let result = input.scan(str("\x1b[<8;10;5M"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "mousedown",
+        button: "left",
+        x: 9,
+        y: 4,
+        alt: true,
+      });
+    });
+
+    it("parses SGR mouse press with ctrl+shift", () => {
+      // btn=20 (ctrl=16 + shift=4) => left + ctrl + shift
+      let result = input.scan(str("\x1b[<20;10;5M"));
+      expect(result.events.length).toBe(1);
+      expect(result.events[0]).toMatchObject({
+        type: "mousedown",
+        button: "left",
+        x: 9,
+        y: 4,
+        ctrl: true,
+        shift: true,
       });
     });
   });
