@@ -254,20 +254,7 @@ function numpad(ops: Op[], ctx: AppContext): void {
   ops.push(close());
 
   // + spanning both rows
-  ops.push(
-    open("box", {
-      layout: {
-        width: fixed(6),
-        height: grow(),
-        padding: { left: 1, right: 1 },
-        alignX: 2,
-        alignY: 2,
-      },
-      bg: inactive,
-    }),
-    text("+", { color: label }),
-    close(),
-  );
+  key(ops, { label: "+", match: is("NumpadAdd") }, ctx);
 
   ops.push(close());
 
@@ -292,20 +279,7 @@ function numpad(ops: Op[], ctx: AppContext): void {
   ops.push(close());
 
   // Enter spanning both rows
-  ops.push(
-    open("box", {
-      layout: {
-        width: fixed(6),
-        height: grow(),
-        padding: { left: 1, right: 1 },
-        alignX: 2,
-        alignY: 2,
-      },
-      bg: inactive,
-    }),
-    text("Ent", { color: label }),
-    close(),
-  );
+  key(ops, { label: "Ent", match: is("NumpadEnter") }, ctx);
 
   ops.push(close());
 
