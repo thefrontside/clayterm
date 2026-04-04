@@ -395,9 +395,21 @@ function buildOps(): Op[] {
   let slideWidth = metrics.frameInnerWidth;
   let transition = state.transition;
   let progress = transition ? transitionProgress() : 0;
-  let offset = transition ? Math.round(progress * slideWidth) * transition.direction : 0;
-  let trackWidth = slideWidth * (transition ? 2 : 1);
-  let indices = transition ? [transition.fromIndex, transition.toIndex] : [state.currentSlide];
+  let step = Math.round(progress * slideWidth);
+  let trackOffset = 0;
+  let trackWidth = slideWidth;
+  let indices = [state.currentSlide];
+
+  if (transition) {
+    trackWidth = slideWidth * 2;
+    if (transition.direction === 1) {
+      indices = [transition.fromIndex, transition.toIndex];
+      trackOffset = -step;
+    } else {
+      indices = [transition.toIndex, transition.fromIndex];
+      trackOffset = step - slideWidth;
+    }
+  }
   let ops: Op[] = [];
 
   ops.push(
@@ -421,7 +433,11 @@ function buildOps(): Op[] {
     }),
     open("viewport", {
       layout: { width: fixed(metrics.frameInnerWidth), height: fixed(metrics.frameInnerHeight) },
-      clip: { horizontal: true, vertical: true, childOffset: { x: -offset, y: 0 } },
+      clip: {
+        horizontal: true,
+        vertical: true,
+        childOffset: { x: trackOffset, y: 0 },
+      },
       bg: palette.frameBg,
     }),
     open("track", {
