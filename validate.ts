@@ -83,9 +83,18 @@ const Clip = Type.Object({
 const Floating = Type.Object({
   x: Type.Optional(Type.Number()),
   y: Type.Optional(Type.Number()),
+  expand: Type.Optional(Type.Object({
+    width: Type.Optional(Type.Number()),
+    height: Type.Optional(Type.Number()),
+  })),
   parent: Type.Optional(Type.Integer({ minimum: 0 })),
   attachTo: Type.Optional(u8),
-  attachPoints: Type.Optional(u8),
+  attachPoints: Type.Optional(Type.Object({
+    element: Type.Optional(u8),
+    parent: Type.Optional(u8),
+  })),
+  pointerCaptureMode: Type.Optional(u8),
+  clipTo: Type.Optional(u8),
   zIndex: Type.Optional(u16),
 });
 

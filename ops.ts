@@ -169,12 +169,24 @@ export function pack(
           o += 4;
           view.setFloat32(o, f.y ?? 0, true);
           o += 4;
+          view.setFloat32(o, f.expand?.width ?? 0, true);
+          o += 4;
+          view.setFloat32(o, f.expand?.height ?? 0, true);
+          o += 4;
           view.setUint32(o, f.parent ?? 0, true);
           o += 4;
           view.setUint32(
             o,
-            (f.attachTo ?? 0) | ((f.attachPoints ?? 0) << 8) |
-              ((f.zIndex ?? 0) << 16),
+            (f.attachTo ?? 0) |
+              ((f.attachPoints?.element ?? 0) << 8) |
+              ((f.attachPoints?.parent ?? 0) << 16) |
+              ((f.pointerCaptureMode ?? 0) << 24),
+            true,
+          );
+          o += 4;
+          view.setUint32(
+            o,
+            (f.clipTo ?? 0) | (((f.zIndex ?? 0) & 0xffff) << 8),
             true,
           );
           o += 4;
@@ -280,12 +292,44 @@ export interface OpenElement {
   floating?: {
     x?: number;
     y?: number;
+    expand?: { width?: number; height?: number };
     parent?: number;
     attachTo?: number;
-    attachPoints?: number;
+    attachPoints?: { element?: number; parent?: number };
+    pointerCaptureMode?: number;
+    clipTo?: number;
     zIndex?: number;
   };
 }
+
+export const ATTACH_POINT = {
+  LEFT_TOP: 0,
+  LEFT_CENTER: 1,
+  LEFT_BOTTOM: 2,
+  CENTER_TOP: 3,
+  CENTER_CENTER: 4,
+  CENTER_BOTTOM: 5,
+  RIGHT_TOP: 6,
+  RIGHT_CENTER: 7,
+  RIGHT_BOTTOM: 8,
+} as const;
+
+export const ATTACH_TO = {
+  NONE: 0,
+  PARENT: 1,
+  ELEMENT_WITH_ID: 2,
+  ROOT: 3,
+} as const;
+
+export const POINTER_CAPTURE_MODE = {
+  CAPTURE: 0,
+  PASSTHROUGH: 1,
+} as const;
+
+export const CLIP_TO = {
+  NONE: 0,
+  ATTACHED_PARENT: 1,
+} as const;
 
 export interface Text {
   id: typeof OP_TEXT;

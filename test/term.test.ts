@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it } from "./suite.ts";
 import { createTerm, type Term } from "../term.ts";
-import { close, fixed, grow, open, rgba, text } from "../ops.ts";
+import {
+  ATTACH_POINT,
+  ATTACH_TO,
+  close,
+  fixed,
+  grow,
+  open,
+  rgba,
+  text,
+} from "../ops.ts";
 import { print } from "./print.ts";
 
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -122,6 +131,50 @@ describe("term", () => {
     );
 
     expect(out.split("\n")[0]).toBe("CDEFGHIJ                                ");
+  });
+
+  it("moves a bordered floating frame as one unit", () => {
+    let out = print(
+      decode(
+        term.render([
+          open("root", {
+            layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+          }),
+          open("frame", {
+            layout: {
+              width: fixed(12),
+              height: fixed(5),
+              direction: "ttb",
+              padding: { left: 1, top: 1 },
+            },
+            border: {
+              color: rgba(255, 255, 255),
+              left: 1,
+              right: 1,
+              top: 1,
+              bottom: 1,
+            },
+            floating: {
+              x: 3,
+              y: 1,
+              attachTo: ATTACH_TO.ROOT,
+              attachPoints: {
+                element: ATTACH_POINT.CENTER_CENTER,
+                parent: ATTACH_POINT.CENTER_CENTER,
+              },
+            },
+          }),
+          text("box"),
+          close(),
+          close(),
+        ]).output,
+      ),
+      40,
+      10,
+    );
+
+    expect(out).toContain("│box       │");
+    expect(out.split("\n")[3]).toContain("┌──────────┐");
   });
 
   describe("row offset", () => {
