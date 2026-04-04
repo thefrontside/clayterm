@@ -31,6 +31,16 @@
 #define PROP_BORDER 0x08
 #define PROP_CLIP 0x10
 #define PROP_FLOATING 0x20
+#define PROP_TRANSITION 0x40
+
+#define TRANSITION_HANDLER_NONE 0
+#define TRANSITION_HANDLER_EASE_OUT 1
+
+#define TRANSITION_PRESET_NONE 0
+#define TRANSITION_PRESET_ENTER_FROM_LEFT 1
+#define TRANSITION_PRESET_ENTER_FROM_RIGHT 2
+#define TRANSITION_PRESET_EXIT_TO_LEFT 3
+#define TRANSITION_PRESET_EXIT_TO_RIGHT 4
 
 /* ── Instance state ───────────────────────────────────────────────── */
 
@@ -44,6 +54,8 @@ struct Clayterm {
   /* clip region */
   int clipx, clipy, clipw, cliph;
   int clipping;
+  Clay_Color overlay;
+  int overlay_active;
 };
 
 /* Memory layout inside the arena provided by the host:
@@ -200,11 +212,91 @@ static uint32_t color(Clay_Color c) {
   return ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
 }
 
+static Clay_Color blend(Clay_Color base, Clay_Color overlay) {
+  float alpha = overlay.a / 255.0f;
+  if (alpha <= 0)
+    return base;
+  return (Clay_Color){
+      .r = base.r + (overlay.r - base.r) * alpha,
+      .g = base.g + (overlay.g - base.g) * alpha,
+      .b = base.b + (overlay.b - base.b) * alpha,
+      .a = 255,
+  };
+}
+
+static Clay_TransitionData transition_preset(Clay_TransitionData state,
+                                             Clay_TransitionProperty properties,
+                                             uint8_t preset, float distance) {
+  if (properties & CLAY_TRANSITION_PROPERTY_X) {
+    if (preset == TRANSITION_PRESET_ENTER_FROM_LEFT ||
+        preset == TRANSITION_PRESET_EXIT_TO_LEFT) {
+      state.boundingBox.x -= distance;
+    } else if (preset == TRANSITION_PRESET_ENTER_FROM_RIGHT ||
+               preset == TRANSITION_PRESET_EXIT_TO_RIGHT) {
+      state.boundingBox.x += distance;
+    }
+  }
+  return state;
+}
+
+static Clay_TransitionData transition_enter_from_left(
+    Clay_TransitionData target, Clay_TransitionProperty properties) {
+  return transition_preset(target, properties, TRANSITION_PRESET_ENTER_FROM_LEFT,
+                           24.0f);
+}
+
+static Clay_TransitionData transition_enter_from_right(
+    Clay_TransitionData target, Clay_TransitionProperty properties) {
+  return transition_preset(target, properties,
+                           TRANSITION_PRESET_ENTER_FROM_RIGHT, 24.0f);
+}
+
+static Clay_TransitionData transition_exit_to_left(
+    Clay_TransitionData initial, Clay_TransitionProperty properties) {
+  return transition_preset(initial, properties, TRANSITION_PRESET_EXIT_TO_LEFT,
+                           24.0f);
+}
+
+static Clay_TransitionData transition_exit_to_right(
+    Clay_TransitionData initial, Clay_TransitionProperty properties) {
+  return transition_preset(initial, properties,
+                           TRANSITION_PRESET_EXIT_TO_RIGHT, 24.0f);
+}
+
+static bool (*decode_transition_handler(uint8_t value))(
+    Clay_TransitionCallbackArguments) {
+  switch (value) {
+  case TRANSITION_HANDLER_EASE_OUT:
+    return Clay_EaseOut;
+  default:
+    return 0;
+  }
+}
+
+static Clay_TransitionData (*decode_transition_preset(uint8_t value))(
+    Clay_TransitionData, Clay_TransitionProperty) {
+  switch (value) {
+  case TRANSITION_PRESET_ENTER_FROM_LEFT:
+    return transition_enter_from_left;
+  case TRANSITION_PRESET_ENTER_FROM_RIGHT:
+    return transition_enter_from_right;
+  case TRANSITION_PRESET_EXIT_TO_LEFT:
+    return transition_exit_to_left;
+  case TRANSITION_PRESET_EXIT_TO_RIGHT:
+    return transition_exit_to_right;
+  default:
+    return 0;
+  }
+}
+
 /* ── Clay render backend ──────────────────────────────────────────── */
 
 static void render_rect(struct Clayterm *ct, int x0, int y0, int x1, int y1,
                         Clay_RectangleRenderData *r) {
-  uint32_t bg = color(r->backgroundColor);
+  Clay_Color fill = r->backgroundColor;
+  if (ct->overlay_active)
+    fill = blend(fill, ct->overlay);
+  uint32_t bg = color(fill);
   for (int y = y0; y < y1; y++)
     for (int x = x0; x < x1; x++)
       setcell(ct, x, y, ' ', ATTR_DEFAULT, bg);
@@ -212,7 +304,10 @@ static void render_rect(struct Clayterm *ct, int x0, int y0, int x1, int y1,
 
 static void render_text(struct Clayterm *ct, int x0, int y0,
                         Clay_TextRenderData *t) {
-  uint32_t fg = color(t->textColor);
+  Clay_Color textColor = t->textColor;
+  if (ct->overlay_active)
+    textColor = blend(textColor, ct->overlay);
+  uint32_t fg = color(textColor);
 
   /* text attrs are packed into the alpha channel by reduce() */
   uint32_t attrs = ((uint32_t)(uint8_t)t->textColor.a) << 24;
@@ -243,7 +338,10 @@ static void render_text(struct Clayterm *ct, int x0, int y0,
 
 static void render_border(struct Clayterm *ct, int x0, int y0, int x1, int y1,
                           Clay_BorderRenderData *b) {
-  uint32_t fg = color(b->color);
+  Clay_Color borderColor = b->color;
+  if (ct->overlay_active)
+    borderColor = blend(borderColor, ct->overlay);
+  uint32_t fg = color(borderColor);
   uint32_t bg = ATTR_DEFAULT;
   int top = b->width.top > 0;
   int bot = b->width.bottom > 0;
@@ -384,7 +482,7 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
   return ct;
 }
 
-void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
+void reduce(struct Clayterm *ct, uint32_t *buf, int len, float dt) {
   int i = 0;
   uint32_t idx = 0;
 
@@ -480,6 +578,24 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
         decl.floating.zIndex = (int16_t)(fd >> 8);
       }
 
+      if (mask & PROP_TRANSITION) {
+        decl.transition.duration = rdf(buf, len, &i);
+        decl.transition.properties = rd(buf, len, &i);
+
+        uint32_t tc = rd(buf, len, &i);
+        decl.transition.handler = decode_transition_handler(tc & 0xff);
+        decl.transition.interactionHandling = (tc >> 8) & 0xff;
+        decl.transition.enter.setInitialState =
+            decode_transition_preset((tc >> 16) & 0xff);
+        decl.transition.enter.trigger = (tc >> 24) & 0xff;
+
+        uint32_t td = rd(buf, len, &i);
+        decl.transition.exit.setFinalState =
+            decode_transition_preset(td & 0xff);
+        decl.transition.exit.trigger = (td >> 8) & 0xff;
+        decl.transition.exit.siblingOrdering = (td >> 16) & 0xff;
+      }
+
       Clay__ConfigureOpenElement(decl);
       break;
     }
@@ -502,7 +618,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
       /* attrs byte -> alpha channel for render_text to extract */
       config.textColor.a = (float)((cfg >> 24) & 0xff);
 
-      Clay__OpenTextElement(text, Clay__StoreTextElementConfig(config));
+      Clay__OpenTextElement(text, config);
       break;
     }
 
@@ -515,12 +631,14 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
     }
   }
 
-  Clay_RenderCommandArray cmds = Clay_EndLayout();
+  Clay_RenderCommandArray cmds = Clay_EndLayout(dt);
 
   /* reset output state */
   ct->out.length = 0;
   ct->lastfg = ct->lastbg = 0xffffffff;
   ct->lastx = ct->lasty = -1;
+  ct->overlay_active = 0;
+  ct->overlay = (Clay_Color){0, 0, 0, 0};
 
   cells_clear(ct->back, ct->w, ct->h);
 
@@ -553,6 +671,14 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
     case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
       ct->clipping = 0;
       break;
+    case CLAY_RENDER_COMMAND_TYPE_OVERLAY_COLOR_START:
+      ct->overlay_active = 1;
+      ct->overlay = cmd->renderData.overlayColor.color;
+      break;
+    case CLAY_RENDER_COMMAND_TYPE_OVERLAY_COLOR_END:
+      ct->overlay_active = 0;
+      ct->overlay = (Clay_Color){0, 0, 0, 0};
+      break;
     default:
       break;
     }
@@ -580,6 +706,21 @@ int pointer_over_id_string_ptr(int index) {
   if (index >= ids.length)
     return 0;
   return (int)ids.internalArray[index].stringId.chars;
+}
+
+int has_active_transitions(void) {
+  Clay_Context *context = Clay_GetCurrentContext();
+  if (!context)
+    return 0;
+  for (int i = 0; i < context->transitionDatas.length; ++i) {
+    Clay__TransitionDataInternal *data =
+        Clay__TransitionDataInternalArray_Get(&context->transitionDatas, i);
+    if (data->state != CLAY_TRANSITION_STATE_IDLE ||
+        data->activeProperties != CLAY_TRANSITION_PROPERTY_NONE) {
+      return 1;
+    }
+  }
+  return 0;
 }
 
 void measure(int ret, int txt) {

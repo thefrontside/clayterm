@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from "./suite.ts";
 import { createTerm, type Term } from "../term.ts";
-import { close, grow, open, text } from "../ops.ts";
+import {
+  close,
+  grow,
+  open,
+  text,
+  TRANSITION_HANDLER,
+  TRANSITION_PRESET,
+  TRANSITION_PROPERTY,
+} from "../ops.ts";
 import { assert, validate, validated } from "../validate.ts";
 import { print } from "./print.ts";
 
@@ -77,6 +85,20 @@ describe("validate", () => {
 
   it("rejects fractional color", () => {
     expect(validate([text("hi", { color: 1.5 })])).toBe(false);
+  });
+
+  it("accepts transition configs", () => {
+    expect(validate([
+      open("x", {
+        transition: {
+          duration: 0.3,
+          handler: TRANSITION_HANDLER.EASE_OUT,
+          properties: TRANSITION_PROPERTY.X,
+          enter: { preset: TRANSITION_PRESET.ENTER_FROM_LEFT },
+        },
+      }),
+      close(),
+    ])).toBe(true);
   });
 });
 

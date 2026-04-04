@@ -2,9 +2,10 @@ export interface Native {
   memory: WebAssembly.Memory;
   statePtr: number;
   opsBuf: number;
-  reduce(ct: number, buf: number, len: number): void;
+  reduce(ct: number, buf: number, len: number, dt: number): void;
   output(ct: number): number;
   length(ct: number): number;
+  hasActiveTransitions(): boolean;
   setPointer(x: number, y: number, down: boolean): void;
   getPointerOverIds(): string[];
 }
@@ -48,9 +49,10 @@ export async function createTermNative(
     __heap_base: WebAssembly.Global;
     clayterm_size(w: number, h: number): number;
     init(mem: number, w: number, h: number, row: number): number;
-    reduce(ct: number, buf: number, len: number): void;
+    reduce(ct: number, buf: number, len: number, dt: number): void;
     output(ct: number): number;
     length(ct: number): number;
+    has_active_transitions(): number;
     Clay_SetPointerState(vec: number, down: number): void;
     pointer_over_count(): number;
     pointer_over_id_string_length(index: number): number;
@@ -78,6 +80,9 @@ export async function createTermNative(
     reduce: ct.reduce,
     output: ct.output,
     length: ct.length,
+    hasActiveTransitions() {
+      return ct.has_active_transitions() !== 0;
+    },
     setPointer(x: number, y: number, down: boolean) {
       let view = new DataView(memory.buffer);
       view.setFloat32(opsBuf, x, true);

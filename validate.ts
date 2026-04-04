@@ -98,6 +98,22 @@ const Floating = Type.Object({
   zIndex: Type.Optional(u16),
 });
 
+const Transition = Type.Object({
+  duration: Type.Optional(Type.Number()),
+  properties: Type.Optional(u32),
+  handler: Type.Optional(u8),
+  interactionHandling: Type.Optional(u8),
+  enter: Type.Optional(Type.Object({
+    preset: Type.Optional(u8),
+    trigger: Type.Optional(u8),
+  })),
+  exit: Type.Optional(Type.Object({
+    preset: Type.Optional(u8),
+    trigger: Type.Optional(u8),
+    siblingOrdering: Type.Optional(u8),
+  })),
+});
+
 /* ── Op types (discriminated on `id`) ─────────────────────────────── */
 
 const CloseElement = Type.Object({ id: Type.Literal(0x04) });
@@ -111,6 +127,7 @@ const OpenElement = Type.Object({
   border: Type.Optional(Border),
   clip: Type.Optional(Clip),
   floating: Type.Optional(Floating),
+  transition: Type.Optional(Transition),
 });
 
 const TextOp = Type.Object({

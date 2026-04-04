@@ -13,6 +13,7 @@ export interface RenderOptions {
     y: number;
     down: boolean;
   };
+  deltaTime?: number;
 }
 
 export type PointerEvent =
@@ -23,6 +24,7 @@ export type PointerEvent =
 export interface RenderResult {
   output: Uint8Array;
   events: PointerEvent[];
+  hasActiveTransitions: boolean;
 }
 
 export interface Term {
@@ -37,11 +39,15 @@ export async function createTerm(options: TermOptions): Promise<Term> {
   let prev = new Set<string>();
   let pressed = new Set<string>();
   let wasDown = false;
+  let lastRenderTime = performance.now();
 
   return {
     render(ops: Op[], options?: RenderOptions): RenderResult {
       let len = pack(ops, memory.buffer, opsBuf, memory.buffer.byteLength);
-      native.reduce(statePtr, opsBuf, len);
+      let now = performance.now();
+      let dt = options?.deltaTime ?? Math.min((now - lastRenderTime) / 1000, 0.25);
+      lastRenderTime = now;
+      native.reduce(statePtr, opsBuf, len, dt);
 
       if (options?.pointer) {
         let { x, y, down } = options.pointer;
@@ -57,6 +63,7 @@ export async function createTerm(options: TermOptions): Promise<Term> {
       let current = new Set(
         options?.pointer ? native.getPointerOverIds() : [],
       );
+      let hasActiveTransitions = native.hasActiveTransitions();
       let down = options?.pointer?.down ?? false;
       let events: PointerEvent[] = [];
 
@@ -89,7 +96,7 @@ export async function createTerm(options: TermOptions): Promise<Term> {
       prev = current;
       wasDown = down;
 
-      return { output, events };
+      return { output, events, hasActiveTransitions };
     },
   };
 }

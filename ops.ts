@@ -10,6 +10,7 @@ const PROP_CORNER_RADIUS = 0x04;
 const PROP_BORDER = 0x08;
 const PROP_CLIP = 0x10;
 const PROP_FLOATING = 0x20;
+const PROP_TRANSITION = 0x40;
 
 /* ── Packing ──────────────────────────────────────────────────────── */
 
@@ -93,6 +94,7 @@ export function pack(
         if (op.border) mask |= PROP_BORDER;
         if (op.clip) mask |= PROP_CLIP;
         if (op.floating) mask |= PROP_FLOATING;
+        if (op.transition) mask |= PROP_TRANSITION;
         view.setUint32(o, mask, true);
         o += 4;
 
@@ -187,6 +189,31 @@ export function pack(
           view.setUint32(
             o,
             (f.clipTo ?? 0) | (((f.zIndex ?? 0) & 0xffff) << 8),
+            true,
+          );
+          o += 4;
+        }
+
+        if (op.transition) {
+          let t = op.transition;
+          view.setFloat32(o, t.duration ?? 0.25, true);
+          o += 4;
+          view.setUint32(o, t.properties ?? 0, true);
+          o += 4;
+          view.setUint32(
+            o,
+            (t.handler ?? 0) |
+              ((t.interactionHandling ?? 0) << 8) |
+              ((t.enter?.preset ?? 0) << 16) |
+              ((t.enter?.trigger ?? 0) << 24),
+            true,
+          );
+          o += 4;
+          view.setUint32(
+            o,
+            (t.exit?.preset ?? 0) |
+              ((t.exit?.trigger ?? 0) << 8) |
+              ((t.exit?.siblingOrdering ?? 0) << 16),
             true,
           );
           o += 4;
@@ -300,6 +327,21 @@ export interface OpenElement {
     clipTo?: number;
     zIndex?: number;
   };
+  transition?: {
+    duration?: number;
+    properties?: number;
+    handler?: number;
+    interactionHandling?: number;
+    enter?: {
+      preset?: number;
+      trigger?: number;
+    };
+    exit?: {
+      preset?: number;
+      trigger?: number;
+      siblingOrdering?: number;
+    };
+  };
 }
 
 export const ATTACH_POINT = {
@@ -329,6 +371,57 @@ export const POINTER_CAPTURE_MODE = {
 export const CLIP_TO = {
   NONE: 0,
   ATTACHED_PARENT: 1,
+} as const;
+
+export const TRANSITION_HANDLER = {
+  NONE: 0,
+  EASE_OUT: 1,
+} as const;
+
+export const TRANSITION_PROPERTY = {
+  NONE: 0,
+  X: 1,
+  Y: 2,
+  POSITION: 3,
+  WIDTH: 4,
+  HEIGHT: 8,
+  DIMENSIONS: 12,
+  BOUNDING_BOX: 15,
+  BACKGROUND_COLOR: 16,
+  OVERLAY_COLOR: 32,
+  CORNER_RADIUS: 64,
+  BORDER_COLOR: 128,
+  BORDER_WIDTH: 256,
+  BORDER: 384,
+} as const;
+
+export const TRANSITION_INTERACTION_HANDLING = {
+  DISABLE_WHILE_POSITIONING: 0,
+  ALLOW_WHILE_POSITIONING: 1,
+} as const;
+
+export const TRANSITION_ENTER_TRIGGER = {
+  SKIP_ON_FIRST_PARENT_FRAME: 0,
+  TRIGGER_ON_FIRST_PARENT_FRAME: 1,
+} as const;
+
+export const TRANSITION_EXIT_TRIGGER = {
+  SKIP_WHEN_PARENT_EXITS: 0,
+  TRIGGER_WHEN_PARENT_EXITS: 1,
+} as const;
+
+export const EXIT_TRANSITION_SIBLING_ORDERING = {
+  UNDERNEATH_SIBLINGS: 0,
+  NATURAL_ORDER: 1,
+  ABOVE_SIBLINGS: 2,
+} as const;
+
+export const TRANSITION_PRESET = {
+  NONE: 0,
+  ENTER_FROM_LEFT: 1,
+  ENTER_FROM_RIGHT: 2,
+  EXIT_TO_LEFT: 3,
+  EXIT_TO_RIGHT: 4,
 } as const;
 
 export interface Text {
