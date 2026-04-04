@@ -4,6 +4,7 @@ import { close, grow, open, rgba, text } from "../ops.ts";
 import { print } from "./print.ts";
 
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+const trim = (s: string) => s.split("\n").map((l) => l.trimEnd()).join("\n");
 
 describe("term", () => {
   let term: Term;
@@ -87,6 +88,67 @@ describe("term", () => {
 │                                      │
 │                                      │
 ╰──────────────────────────────────────╯`.trim());
+  });
+
+  describe("line mode", () => {
+    let box = (msg: string) => [
+      open("root", {
+        layout: { width: grow(), height: grow(), direction: "ttb" },
+      }),
+      open("box", {
+        layout: {
+          width: grow(),
+          height: grow(),
+          direction: "ttb",
+          padding: { left: 1, top: 1 },
+        },
+        border: {
+          color: rgba(255, 255, 255),
+          left: 1,
+          right: 1,
+          top: 1,
+          bottom: 1,
+        },
+      }),
+      text(msg),
+      close(),
+      close(),
+    ];
+
+    it("renders with newlines instead of CUP sequences", async () => {
+      let term = await createTerm({ width: 20, height: 5 });
+
+      let out = decode(
+        term.render(box("hello world"), { mode: "line" }).output,
+      );
+      // deno-lint-ignore no-control-regex
+      expect(out).not.toMatch(/\x1b\[\d+;\d+H/);
+      expect(out.split("\n").length).toBe(5);
+      expect(trim(print(out, 20, 5))).toEqual(`
+┌──────────────────┐
+│hello world       │
+│                  │
+│                  │
+└──────────────────┘`.trim());
+    });
+
+    it("primes front buffer for subsequent diff render", async () => {
+      let term = await createTerm({ width: 20, height: 5 });
+
+      let first = decode(
+        term.render(box("hello world"), { mode: "line" }).output,
+      );
+      let second = decode(term.render(box("goodbye")).output);
+
+      expect(trim(print(first + second, 20, 5))).toEqual(`
+┌──────────────────┐
+│goodbye           │
+│                  │
+│                  │
+└──────────────────┘`.trim());
+
+      expect(second.length).toBeLessThan(first.length);
+    });
   });
 
   describe("row offset", () => {

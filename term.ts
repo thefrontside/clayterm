@@ -8,6 +8,7 @@ export interface TermOptions {
 }
 
 export interface RenderOptions {
+  mode?: "line";
   pointer?: {
     x: number;
     y: number;
@@ -41,7 +42,8 @@ export async function createTerm(options: TermOptions): Promise<Term> {
   return {
     render(ops: Op[], options?: RenderOptions): RenderResult {
       let len = pack(ops, memory.buffer, opsBuf, memory.buffer.byteLength);
-      native.reduce(statePtr, opsBuf, len);
+      let mode = options?.mode === "line" ? 1 : 0;
+      native.reduce(statePtr, opsBuf, len, mode);
 
       if (options?.pointer) {
         let { x, y, down } = options.pointer;

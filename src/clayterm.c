@@ -191,6 +191,43 @@ static void present(struct Clayterm *ct) {
   }
 }
 
+static void present_lines(struct Clayterm *ct) {
+  for (int y = 0; y < ct->h; y++) {
+    if (y > 0)
+      buf_put(&ct->out, "\n", 1);
+    for (int x = 0; x < ct->w;) {
+      Cell *back = cell_at(ct, ct->back, x, y);
+      Cell *front = cell_at(ct, ct->front, x, y);
+
+      int w = wcwidth(back->ch);
+      if (w < 1)
+        w = 1;
+
+      *front = *back;
+
+      emit_attr(ct, back->fg, back->bg);
+
+      if (w > 1 && x >= ct->w - (w - 1)) {
+        for (int i = x; i < ct->w; i++) {
+          buf_char(&ct->out, ' ');
+        }
+      } else {
+        uint32_t ch = back->ch;
+        if (!iswprint(ch))
+          ch = 0xfffd;
+        buf_char(&ct->out, ch);
+        for (int i = 1; i < w; i++) {
+          Cell *fw = cell_at(ct, ct->front, x + i, y);
+          fw->ch = 0xffffffff;
+          fw->fg = 0xffffffff;
+          fw->bg = 0xffffffff;
+        }
+      }
+      x += w;
+    }
+  }
+}
+
 /* ── Color conversion ─────────────────────────────────────────────── */
 
 static uint32_t color(Clay_Color c) {
@@ -384,7 +421,7 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
   return ct;
 }
 
-void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
+void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode) {
   int i = 0;
   uint32_t idx = 0;
 
@@ -550,8 +587,11 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
     }
   }
 
-  /* diff front vs back, emit escape sequences */
-  present(ct);
+  if (mode == 1) {
+    present_lines(ct);
+  } else {
+    present(ct);
+  }
 }
 
 char *output(struct Clayterm *ct) { return ct->out.data; }

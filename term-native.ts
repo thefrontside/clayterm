@@ -2,7 +2,7 @@ export interface Native {
   memory: WebAssembly.Memory;
   statePtr: number;
   opsBuf: number;
-  reduce(ct: number, buf: number, len: number): void;
+  reduce(ct: number, buf: number, len: number, mode: number): void;
   output(ct: number): number;
   length(ct: number): number;
   setPointer(x: number, y: number, down: boolean): void;
@@ -48,7 +48,7 @@ export async function createTermNative(
     __heap_base: WebAssembly.Global;
     clayterm_size(w: number, h: number): number;
     init(mem: number, w: number, h: number, row: number): number;
-    reduce(ct: number, buf: number, len: number): void;
+    reduce(ct: number, buf: number, len: number, mode: number): void;
     output(ct: number): number;
     length(ct: number): number;
     Clay_SetPointerState(vec: number, down: number): void;
