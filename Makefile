@@ -1,4 +1,5 @@
-CC = clang
+CC ?= $(shell if [ -x /opt/homebrew/opt/llvm/bin/clang ]; then printf %s /opt/homebrew/opt/llvm/bin/clang; else command -v clang; fi)
+WASM_LD_DIR ?= $(shell if command -v wasm-ld >/dev/null 2>&1; then dirname "$$(command -v wasm-ld)"; elif [ -x /opt/homebrew/bin/wasm-ld ]; then printf %s /opt/homebrew/bin; fi)
 TARGET = clayterm.wasm
 SRC = src/module.c
 
@@ -19,7 +20,7 @@ all: $(TARGET)
 DEPS = $(wildcard src/*.c src/*.h)
 
 $(TARGET): $(DEPS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC)
+	PATH="$(WASM_LD_DIR):$$PATH" $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRC)
 
 clean:
 	rm -f $(TARGET)
