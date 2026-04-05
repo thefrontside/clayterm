@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "demo": "deno run -A main.ts"
+  }
+}

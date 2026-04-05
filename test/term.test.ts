@@ -1,6 +1,22 @@
 import { beforeEach, describe, expect, it } from "./suite.ts";
 import { createTerm, type Term } from "../term.ts";
-import { close, grow, open, rgba, text } from "../ops.ts";
+import {
+  ATTACH_POINT,
+  ATTACH_TO,
+  EXIT_TRANSITION_SIBLING_ORDERING,
+  TRANSITION_ENTER_TRIGGER,
+  TRANSITION_EXIT_TRIGGER,
+  TRANSITION_HANDLER,
+  TRANSITION_INTERACTION_HANDLING,
+  TRANSITION_PRESET,
+  TRANSITION_PROPERTY,
+  close,
+  fixed,
+  grow,
+  open,
+  rgba,
+  text,
+} from "../ops.ts";
 import { print } from "./print.ts";
 
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -87,6 +103,181 @@ describe("term", () => {
 │                                      │
 │                                      │
 ╰──────────────────────────────────────╯`.trim());
+  });
+
+  it("clips children with horizontal child offsets", () => {
+    let out = print(
+      decode(
+        term.render([
+          open("root", {
+            layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+          }),
+          open("viewport", {
+            layout: { width: fixed(8), height: fixed(1) },
+            clip: { horizontal: true, childOffset: { x: -2 } },
+          }),
+          open("track", {
+            layout: { width: fixed(12), height: fixed(1), direction: "ltr" },
+          }),
+          open("a", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("ABCD"),
+          close(),
+          open("b", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("EFGH"),
+          close(),
+          open("c", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("IJKL"),
+          close(),
+          close(),
+          close(),
+          close(),
+        ]).output,
+      ),
+      40,
+      10,
+    );
+
+    expect(out.split("\n")[0]).toBe("CDEFGHIJ                                ");
+  });
+
+  it("moves a bordered floating frame as one unit", () => {
+    let out = print(
+      decode(
+        term.render([
+          open("root", {
+            layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+          }),
+          open("frame", {
+            layout: {
+              width: fixed(12),
+              height: fixed(5),
+              direction: "ttb",
+              padding: { left: 1, top: 1 },
+            },
+            border: {
+              color: rgba(255, 255, 255),
+              left: 1,
+              right: 1,
+              top: 1,
+              bottom: 1,
+            },
+            floating: {
+              x: 3,
+              y: 1,
+              attachTo: ATTACH_TO.ROOT,
+              attachPoints: {
+                element: ATTACH_POINT.CENTER_CENTER,
+                parent: ATTACH_POINT.CENTER_CENTER,
+              },
+            },
+          }),
+          text("box"),
+          close(),
+          close(),
+        ]).output,
+      ),
+      40,
+      10,
+    );
+
+    expect(out).toContain("│box       │");
+    expect(out.split("\n")[3]).toContain("┌──────────┐");
+  });
+
+  it("accepts transition-configured elements across frames", () => {
+    let ops = [
+      open("root", {
+        layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+      }),
+      open("box", {
+        layout: {
+          width: fixed(12),
+          height: fixed(5),
+          direction: "ttb",
+          padding: { left: 1, top: 1 },
+        },
+        border: {
+          color: rgba(255, 255, 255),
+          left: 1,
+          right: 1,
+          top: 1,
+          bottom: 1,
+        },
+        transition: {
+          duration: 0.25,
+          handler: TRANSITION_HANDLER.EASE_OUT,
+          properties: TRANSITION_PROPERTY.X,
+          interactionHandling:
+            TRANSITION_INTERACTION_HANDLING.DISABLE_WHILE_POSITIONING,
+          enter: {
+            preset: TRANSITION_PRESET.ENTER_FROM_LEFT,
+            trigger: TRANSITION_ENTER_TRIGGER.TRIGGER_ON_FIRST_PARENT_FRAME,
+          },
+          exit: {
+            preset: TRANSITION_PRESET.EXIT_TO_RIGHT,
+            trigger: TRANSITION_EXIT_TRIGGER.TRIGGER_WHEN_PARENT_EXITS,
+            siblingOrdering:
+              EXIT_TRANSITION_SIBLING_ORDERING.NATURAL_ORDER,
+          },
+        },
+      }),
+      text("transition"),
+      close(),
+      close(),
+    ];
+
+    expect(() => {
+      term.render(ops, { deltaTime: 0 });
+      term.render(ops, { deltaTime: 0.016 });
+    }).not.toThrow();
+  });
+
+  it("reports active transitions while a transition is running", () => {
+    let enterOps = [
+      open("root", {
+        layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+      }),
+      close(),
+    ];
+
+    let transitionOps = [
+      open("root", {
+        layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+      }),
+      open("box", {
+        layout: {
+          width: fixed(12),
+          height: fixed(5),
+          direction: "ttb",
+          padding: { left: 1, top: 1 },
+        },
+        border: {
+          color: rgba(255, 255, 255),
+          left: 1,
+          right: 1,
+          top: 1,
+          bottom: 1,
+        },
+        transition: {
+          duration: 0.25,
+          handler: TRANSITION_HANDLER.EASE_OUT,
+          properties: TRANSITION_PROPERTY.X,
+          interactionHandling:
+            TRANSITION_INTERACTION_HANDLING.DISABLE_WHILE_POSITIONING,
+          enter: {
+            preset: TRANSITION_PRESET.ENTER_FROM_LEFT,
+            trigger: TRANSITION_ENTER_TRIGGER.TRIGGER_ON_FIRST_PARENT_FRAME,
+          },
+        },
+      }),
+      text("box"),
+      close(),
+      close(),
+    ];
+
+    term.render(enterOps, { deltaTime: 0 });
+    let result = term.render(transitionOps, { deltaTime: 0.016 });
+    expect(result.hasActiveTransitions).toBe(true);
   });
 
   describe("row offset", () => {

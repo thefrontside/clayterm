@@ -74,15 +74,44 @@ const Border = Type.Object({
 const Clip = Type.Object({
   horizontal: Type.Optional(Type.Boolean()),
   vertical: Type.Optional(Type.Boolean()),
+  childOffset: Type.Optional(Type.Object({
+    x: Type.Optional(Type.Number()),
+    y: Type.Optional(Type.Number()),
+  })),
 });
 
 const Floating = Type.Object({
   x: Type.Optional(Type.Number()),
   y: Type.Optional(Type.Number()),
+  expand: Type.Optional(Type.Object({
+    width: Type.Optional(Type.Number()),
+    height: Type.Optional(Type.Number()),
+  })),
   parent: Type.Optional(Type.Integer({ minimum: 0 })),
   attachTo: Type.Optional(u8),
-  attachPoints: Type.Optional(u8),
+  attachPoints: Type.Optional(Type.Object({
+    element: Type.Optional(u8),
+    parent: Type.Optional(u8),
+  })),
+  pointerCaptureMode: Type.Optional(u8),
+  clipTo: Type.Optional(u8),
   zIndex: Type.Optional(u16),
+});
+
+const Transition = Type.Object({
+  duration: Type.Optional(Type.Number()),
+  properties: Type.Optional(u32),
+  handler: Type.Optional(u8),
+  interactionHandling: Type.Optional(u8),
+  enter: Type.Optional(Type.Object({
+    preset: Type.Optional(u8),
+    trigger: Type.Optional(u8),
+  })),
+  exit: Type.Optional(Type.Object({
+    preset: Type.Optional(u8),
+    trigger: Type.Optional(u8),
+    siblingOrdering: Type.Optional(u8),
+  })),
 });
 
 /* ── Op types (discriminated on `id`) ─────────────────────────────── */
@@ -98,6 +127,7 @@ const OpenElement = Type.Object({
   border: Type.Optional(Border),
   clip: Type.Optional(Clip),
   floating: Type.Optional(Floating),
+  transition: Type.Optional(Transition),
 });
 
 const TextOp = Type.Object({

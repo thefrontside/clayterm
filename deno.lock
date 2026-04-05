@@ -21,6 +21,7 @@
     "jsr:@ts-morph/common@0.27": "0.27.0",
     "npm:@sinclair/typebox@*": "0.34.48",
     "npm:@sinclair/typebox@0.34": "0.34.48",
+    "npm:@types/node@*": "24.2.0",
     "npm:effection@^4.0.2": "4.0.2",
     "npm:valrs@*": "0.1.0"
   },
@@ -108,8 +109,17 @@
     "@sinclair/typebox@0.34.48": {
       "integrity": "sha512-kKJTNuK3AQOrgjjotVxMrCn1sUJwM76wMszfq1kdU4uYVJjvEWuFQ6HgvLt4Xz3fSmZlTOxJ/Ie13KnIcWQXFA=="
     },
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
     "effection@4.0.2": {
       "integrity": "sha512-O8WMGP10nPuJDwbNGILcaCNWS+CvDYjcdsUSD79nWZ+WtUQ8h1MEV7JJwCSZCSeKx8+TdEaZ/8r6qPTR2o/o8w=="
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     },
     "valrs@0.1.0": {
       "integrity": "sha512-BqVkjx3qhsRLHerblLDoqEx0OEx7ms0DB6LPv40oWkMfFKUVKrqVuklaGdrPrHyubC5hSHYfEtUiQXrCkC6xHQ=="
