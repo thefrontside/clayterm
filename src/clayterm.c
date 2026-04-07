@@ -484,7 +484,6 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
 
 void reduce(struct Clayterm *ct, uint32_t *buf, int len, float dt) {
   int i = 0;
-  uint32_t idx = 0;
 
   Clay_BeginLayout();
 
@@ -501,7 +500,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, float dt) {
 
       if (id_len > 0) {
         Clay_String str = {.length = (int32_t)id_len, .chars = id_chars};
-        Clay_ElementId eid = Clay__HashString(str, idx++);
+        Clay_ElementId eid = Clay__HashString(str, 0);
         Clay__OpenElementWithId(eid);
       } else {
         Clay__OpenElement();
