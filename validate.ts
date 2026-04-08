@@ -7,8 +7,11 @@ import type { RenderOptions, RenderResult, Term } from "./term.ts";
 
 const u8 = Type.Integer({ minimum: 0, maximum: 255 });
 const u16 = Type.Integer({ minimum: 0, maximum: 65535 });
-const u32 = Type.Integer({ minimum: 0, maximum: 0xFFFFFFFF });
-const color = Type.Integer({ minimum: -0x80000000, maximum: 0xFFFFFFFF });
+
+/* RGBA color packed as (a << 24 | r << 16 | g << 8 | b). When alpha >= 128,
+ * bit 31 is set and JavaScript interprets the value as a negative int32.
+ * Accept both signed and unsigned representations of the same bit pattern. */
+const rgba = Type.Integer({ minimum: -0x80000000, maximum: 0xFFFFFFFF });
 
 /* ── Sizing axis (discriminated union) ────────────────────────────── */
 
@@ -65,7 +68,7 @@ const CornerRadius = Type.Object({
 });
 
 const Border = Type.Object({
-  color: color,
+  color: rgba,
   left: Type.Optional(u8),
   right: Type.Optional(u8),
   top: Type.Optional(u8),
@@ -94,7 +97,7 @@ const OpenElement = Type.Object({
   id: Type.Literal(0x02),
   name: Type.String(),
   layout: Type.Optional(Layout),
-  bg: Type.Optional(color),
+  bg: Type.Optional(rgba),
   cornerRadius: Type.Optional(CornerRadius),
   border: Type.Optional(Border),
   clip: Type.Optional(Clip),
@@ -104,7 +107,7 @@ const OpenElement = Type.Object({
 const TextOp = Type.Object({
   id: Type.Literal(0x03),
   content: Type.String(),
-  color: Type.Optional(color),
+  color: Type.Optional(rgba),
   fontSize: Type.Optional(u8),
   fontId: Type.Optional(u8),
   wrap: Type.Optional(u8),
