@@ -4,11 +4,22 @@ import { createTermNative } from "./term-native.ts";
 export interface TermOptions {
   height: number;
   width: number;
-  top?: number;
 }
 
 export interface RenderOptions {
   mode?: "line";
+
+  /**
+   * Row where to begin rendering. This should only be used when
+   * rendering into a region as part of the CLI main screen. For
+   * interfaces that use the entire screen, leave unset which will
+   * default to 0. This is 1-based which which is the DSR native
+   * format.
+   *
+   * https://www.ecma-international.org/publications-and-standards/standards/ecma-48/
+   */
+  row?: number;
+
   pointer?: {
     x: number;
     y: number;
@@ -31,8 +42,8 @@ export interface Term {
 }
 
 export async function createTerm(options: TermOptions): Promise<Term> {
-  let { width, height, top = 0 } = options;
-  let native = await createTermNative(width, height, top);
+  let { width, height } = options;
+  let native = await createTermNative(width, height);
   let { memory, statePtr, opsBuf } = native;
 
   let prev = new Set<string>();
@@ -43,7 +54,8 @@ export async function createTerm(options: TermOptions): Promise<Term> {
     render(ops: Op[], options?: RenderOptions): RenderResult {
       let len = pack(ops, memory.buffer, opsBuf, memory.buffer.byteLength);
       let mode = options?.mode === "line" ? 1 : 0;
-      native.reduce(statePtr, opsBuf, len, mode);
+      let row = options?.row ?? 1;
+      native.reduce(statePtr, opsBuf, len, mode, row);
 
       if (options?.pointer) {
         let { x, y, down } = options.pointer;

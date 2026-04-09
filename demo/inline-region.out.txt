@@ -1,0 +1,16 @@
+[step 1] line mode render
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-10197916,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"⠋ Compiling modules...","color":-7607811},{"id":4},{"id":4}]
+[step 2] DSR query
+  cursor at top=52, region top=50
+[step 3] save cursor, start CUP renders
+[step 4] CUP frame 1
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-10197916,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"⠙ Compiling modules...","color":-7607811},{"id":4},{"id":4}]
+[step 5] CUP frame 2
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-10197916,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"⠹ Compiling modules...","color":-7607811},{"id":4},{"id":4}]
+[step 6] CUP frame 3
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-10197916,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"⠸ Compiling modules...","color":-7607811},{"id":4},{"id":4}]
+[step 7] CUP frame 4
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-10197916,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"⠼ Compiling modules...","color":-7607811},{"id":4},{"id":4}]
+[step 8] CUP frame 5
+  ops: [{"id":2,"name":"root","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb"},"bg":-14144970},{"id":2,"name":"box","layout":{"width":{"type":"grow","min":0,"max":0},"height":{"type":"grow","min":0,"max":0},"direction":"ttb","padding":{"left":1},"alignY":2},"border":{"color":-11470213,"left":1,"right":1,"top":1,"bottom":1},"cornerRadius":{"tl":1,"tr":1,"bl":1,"br":1}},{"id":3,"content":"✓ Compiling modules...","color":-11470213},{"id":4},{"id":4}]
+[step 9] commit — restore cursor, advance

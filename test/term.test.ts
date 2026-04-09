@@ -153,7 +153,7 @@ describe("term", () => {
 
   describe("row offset", () => {
     it("renders two frames at the offset position", async () => {
-      let term = await createTerm({ width: 20, height: 5, top: 5 });
+      let term = await createTerm({ width: 20, height: 5 });
       let box = (msg: string) => [
         open("root", {
           layout: { width: grow(), height: grow(), direction: "ttb" },
@@ -181,7 +181,7 @@ describe("term", () => {
       let header = await createTerm({ width: 20, height: 5 });
       let banner = decode(header.render(box("hello")).output);
 
-      let first = decode(term.render(box("world")).output);
+      let first = decode(term.render(box("world"), { row: 6 }).output);
       expect(print(banner + first, 20, 10)).toEqual(`\
 ┌──────────────────┐
 │hello             │
@@ -194,7 +194,7 @@ describe("term", () => {
 │                  │
 └──────────────────┘`);
 
-      let second = decode(term.render(box("universe")).output);
+      let second = decode(term.render(box("universe"), { row: 6 }).output);
       expect(print(banner + first + second, 20, 10)).toEqual(`\
 ┌──────────────────┐
 │hello             │

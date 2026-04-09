@@ -35,7 +35,7 @@
 /* ── Instance state ───────────────────────────────────────────────── */
 
 struct Clayterm {
-  int w, h, row;
+  int w, h;
   Cell *front;
   Cell *back;
   Buffer out;
@@ -129,17 +129,18 @@ static void emit_attr(struct Clayterm *ct, uint32_t fg, uint32_t bg) {
   ct->lastbg = bg;
 }
 
-static void emit_cursor(struct Clayterm *ct, int x, int y) {
+/** Emit CUP sequence. `row` is the 1-based terminal row of the region. */
+static void emit_cursor(struct Clayterm *ct, int x, int y, int row) {
   buf_str(&ct->out, "\x1b[");
-  buf_num(&ct->out, y + 1 + ct->row);
+  buf_num(&ct->out, y + row);
   buf_put(&ct->out, ";", 1);
   buf_num(&ct->out, x + 1);
   buf_put(&ct->out, "H", 1);
 }
 
-static void emit_ch(struct Clayterm *ct, int x, int y, uint32_t ch) {
+static void emit_ch(struct Clayterm *ct, int x, int y, int row, uint32_t ch) {
   if (ct->lastx != x - 1 || ct->lasty != y) {
-    emit_cursor(ct, x, y);
+    emit_cursor(ct, x, y, row);
   }
   ct->lastx = x;
   ct->lasty = y;
@@ -155,7 +156,7 @@ static void emit_ch(struct Clayterm *ct, int x, int y, uint32_t ch) {
  * skipped, making this efficient for subsequent frames where most of
  * the screen is static. Derived from termbox2 tb_present.
  */
-static void present_cups(struct Clayterm *ct) {
+static void present_cups(struct Clayterm *ct, int row) {
   ct->lastx = -1;
   ct->lasty = -1;
 
@@ -177,9 +178,9 @@ static void present_cups(struct Clayterm *ct) {
         if (w > 1 && x >= ct->w - (w - 1)) {
           /* wide char doesn't fit, send spaces */
           for (int i = x; i < ct->w; i++)
-            emit_ch(ct, i, y, ' ');
+            emit_ch(ct, i, y, row, ' ');
         } else {
-          emit_ch(ct, x, y, back->ch);
+          emit_ch(ct, x, y, row, back->ch);
           /* mark trailing cells of wide char as invalid in front
            * so they'll diff when overwritten by narrow chars */
           for (int i = 1; i < w; i++) {
@@ -400,7 +401,7 @@ int clayterm_size(int w, int h) {
 
 static void clay_error(Clay_ErrorData err) { (void)err; }
 
-struct Clayterm *init(void *mem, int w, int h, int row) {
+struct Clayterm *init(void *mem, int w, int h) {
   struct Clayterm *ct = (struct Clayterm *)mem;
   int cell_count = w * h;
   int cell_bytes = align8(cell_count * (int)sizeof(Cell));
@@ -417,7 +418,6 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
   *ct = (struct Clayterm){
       .w = w,
       .h = h,
-      .row = row,
       .front = (Cell *)base,
       .back = (Cell *)(base + cell_bytes),
       .out = {base + cell_bytes * 2, 0, cell_count * OUT_BYTES_PER_CELL},
@@ -435,7 +435,7 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
   return ct;
 }
 
-void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode) {
+void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
   int i = 0;
   uint32_t idx = 0;
 
@@ -604,7 +604,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode) {
   if (mode == 1) {
     present_lines(ct);
   } else {
-    present_cups(ct);
+    present_cups(ct, row);
   }
 }
 
