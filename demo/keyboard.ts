@@ -33,15 +33,15 @@ import {
 import { useInput } from "./use-input.ts";
 import { useStdin } from "./use-stdin.ts";
 
-let active = rgba(60, 120, 220);
-let inactive = rgba(50, 50, 60);
-let on = rgba(40, 180, 80);
-let label = rgba(220, 220, 220);
-let dim = rgba(100, 100, 120);
-let highlight = rgba(255, 220, 80);
+const active = rgba(60, 120, 220);
+const inactive = rgba(50, 50, 60);
+const on = rgba(40, 180, 80);
+const label = rgba(220, 220, 220);
+const dim = rgba(100, 100, 120);
+const highlight = rgba(255, 220, 80);
 
-let KEY_W = 5;
-let GAP = 1;
+const KEY_W = 5;
+const GAP = 1;
 
 interface KeyDef {
   label: string;
@@ -58,7 +58,7 @@ function matches(k: KeyDef, event: InputEvent | PointerEvent): boolean {
     event.code.toUpperCase() === k.code.toUpperCase();
 }
 
-let hovered = rgba(80, 80, 100);
+const hovered = rgba(80, 80, 100);
 
 function key(ops: Op[], k: KeyDef, ctx: AppContext): void {
   let pressed = ctx.event && matches(k, ctx.event);
@@ -328,7 +328,7 @@ function toggle(ops: Op[], enabled: boolean, name: string): void {
   );
 }
 
-let flagNames:
+const flagNames:
   (keyof Omit<AppContext, "mode" | "event" | "logged" | "log" | "entered">)[] =
     [
       "Disambiguate escape codes",
@@ -338,7 +338,7 @@ let flagNames:
       "Report associated text",
     ];
 
-let logEntries: { key: string; name: keyof EventFilter }[] = [
+const logEntries: { key: string; name: keyof EventFilter }[] = [
   { key: "a", name: "keydown" },
   { key: "b", name: "keyup" },
   { key: "c", name: "keyrepeat" },

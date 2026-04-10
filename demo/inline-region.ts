@@ -28,22 +28,22 @@ import {
 import { cursor, settings } from "../settings.ts";
 import { validated } from "../validate.ts";
 
-let encode = (s: string) => new TextEncoder().encode(s);
-let write = (b: Uint8Array) => Deno.stdout.writeSync(b);
+const encode = (s: string) => new TextEncoder().encode(s);
+const write = (b: Uint8Array) => Deno.stdout.writeSync(b);
 
-let GREEN = rgba(80, 250, 123);
-let GRAY = rgba(100, 100, 100);
-let CYAN = rgba(139, 233, 253);
+const GREEN = rgba(80, 250, 123);
+const GRAY = rgba(100, 100, 100);
+const CYAN = rgba(139, 233, 253);
 
-let RED = rgba(255, 0, 0);
-let ORANGE = rgba(255, 153, 0);
-let YELLOW = rgba(255, 255, 0);
-let NGREEN = rgba(51, 255, 0);
-let BLUE = rgba(0, 153, 255);
-let VIOLET = rgba(102, 0, 255);
-let RAINBOW = [RED, ORANGE, YELLOW, NGREEN, BLUE, VIOLET];
+const RED = rgba(255, 0, 0);
+const ORANGE = rgba(255, 153, 0);
+const YELLOW = rgba(255, 255, 0);
+const NGREEN = rgba(51, 255, 0);
+const BLUE = rgba(0, 153, 255);
+const VIOLET = rgba(102, 0, 255);
+const RAINBOW = [RED, ORANGE, YELLOW, NGREEN, BLUE, VIOLET];
 
-let BRAILLE = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const BRAILLE = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function* queryCursor(): Operation<CursorEvent> {
   let parser = yield* until(createInput({ escLatency: 100 }));
