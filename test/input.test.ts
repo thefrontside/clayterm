@@ -687,8 +687,8 @@ describe("input", () => {
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
         type: "cursor",
-        top: 23,
-        left: 79,
+        row: 24,
+        column: 80,
       });
     });
 
@@ -697,8 +697,8 @@ describe("input", () => {
       expect(result.events.length).toBe(1);
       expect(result.events[0]).toMatchObject({
         type: "cursor",
-        top: 0,
-        left: 0,
+        row: 1,
+        column: 1,
       });
     });
 
@@ -708,8 +708,8 @@ describe("input", () => {
       expect(result.events[0]).toMatchObject({ type: "keydown", key: "a" });
       expect(result.events[1]).toMatchObject({
         type: "cursor",
-        top: 9,
-        left: 4,
+        row: 10,
+        column: 5,
       });
       expect(result.events[2]).toMatchObject({ type: "keydown", key: "b" });
     });

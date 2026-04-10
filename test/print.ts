@@ -38,6 +38,10 @@ export function print(ansi: string, w: number, h: number): string {
         // SGR — ignore
       }
       // ignore all other CSI sequences (?25l, ?25h, etc.)
+    } else if (ansi[i] === "\n") {
+      y++;
+      x = 0;
+      i++;
     } else {
       // regular character — could be multi-byte UTF-8
       let cp = ansi.codePointAt(i)!;

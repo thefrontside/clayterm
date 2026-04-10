@@ -2,11 +2,12 @@
 
 #include "cell.h"
 
-void cells_clear(Cell *buf, int w, int h) {
+void cells_fill(Cell *buf, int w, int h, uint32_t ch, uint32_t fg,
+                uint32_t bg) {
   for (int i = 0; i < w * h; i++) {
-    buf[i].ch = ' ';
-    buf[i].fg = ATTR_DEFAULT;
-    buf[i].bg = ATTR_DEFAULT;
+    buf[i].ch = ch;
+    buf[i].fg = fg;
+    buf[i].bg = bg;
   }
 }
 

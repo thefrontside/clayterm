@@ -604,8 +604,8 @@ static int parse_cursor(struct InputState *st, struct InputEvent *ev) {
         return PARSE_ERR;
       i++;
       ev->type = EVENT_CURSOR;
-      ev->y = row - 1;
-      ev->x = col - 1;
+      ev->y = row;
+      ev->x = col;
       shift(st, i);
       return PARSE_OK;
     } else {

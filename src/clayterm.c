@@ -35,7 +35,7 @@
 /* ── Instance state ───────────────────────────────────────────────── */
 
 struct Clayterm {
-  int w, h, row;
+  int w, h;
   Cell *front;
   Cell *back;
   Buffer out;
@@ -129,17 +129,18 @@ static void emit_attr(struct Clayterm *ct, uint32_t fg, uint32_t bg) {
   ct->lastbg = bg;
 }
 
-static void emit_cursor(struct Clayterm *ct, int x, int y) {
+/** Emit CUP sequence. `row` is the 1-based terminal row of the region. */
+static void emit_cursor(struct Clayterm *ct, int x, int y, int row) {
   buf_str(&ct->out, "\x1b[");
-  buf_num(&ct->out, y + 1 + ct->row);
+  buf_num(&ct->out, y + row);
   buf_put(&ct->out, ";", 1);
   buf_num(&ct->out, x + 1);
   buf_put(&ct->out, "H", 1);
 }
 
-static void emit_ch(struct Clayterm *ct, int x, int y, uint32_t ch) {
+static void emit_ch(struct Clayterm *ct, int x, int y, int row, uint32_t ch) {
   if (ct->lastx != x - 1 || ct->lasty != y) {
-    emit_cursor(ct, x, y);
+    emit_cursor(ct, x, y, row);
   }
   ct->lastx = x;
   ct->lasty = y;
@@ -149,9 +150,13 @@ static void emit_ch(struct Clayterm *ct, int x, int y, uint32_t ch) {
   buf_char(&ct->out, ch);
 }
 
-/* ── Double-buffer diff (from termbox2 tb_present) ────────────────── */
-
-static void present(struct Clayterm *ct) {
+/**
+ * Diff back buffer against front buffer and emit only changed cells
+ * using absolute CUP positioning (\x1b[row;colH). Unchanged cells are
+ * skipped, making this efficient for subsequent frames where most of
+ * the screen is static. Derived from termbox2 tb_present.
+ */
+static void present_cups(struct Clayterm *ct, int row) {
   ct->lastx = -1;
   ct->lasty = -1;
 
@@ -173,9 +178,9 @@ static void present(struct Clayterm *ct) {
         if (w > 1 && x >= ct->w - (w - 1)) {
           /* wide char doesn't fit, send spaces */
           for (int i = x; i < ct->w; i++)
-            emit_ch(ct, i, y, ' ');
+            emit_ch(ct, i, y, row, ' ');
         } else {
-          emit_ch(ct, x, y, back->ch);
+          emit_ch(ct, x, y, row, back->ch);
           /* mark trailing cells of wide char as invalid in front
            * so they'll diff when overwritten by narrow chars */
           for (int i = 1; i < w; i++) {
@@ -184,6 +189,50 @@ static void present(struct Clayterm *ct) {
             fw->fg = 0xffffffff;
             fw->bg = 0xffffffff;
           }
+        }
+      }
+      x += w;
+    }
+  }
+}
+
+/**
+ * Emit back buffer as newline-separated rows without CUP positioning.
+ * Every cell is written (no diffing), and the front buffer is primed
+ * so that a subsequent present() call can diff efficiently. This is
+ * used for inline "region" rendering where the caller manages cursor
+ * positioning externally and the output must work in pipes.
+ */
+static void present_lines(struct Clayterm *ct) {
+  for (int y = 0; y < ct->h; y++) {
+    if (y > 0)
+      buf_put(&ct->out, "\n", 1);
+    for (int x = 0; x < ct->w;) {
+      Cell *back = cell_at(ct, ct->back, x, y);
+      Cell *front = cell_at(ct, ct->front, x, y);
+
+      int w = wcwidth(back->ch);
+      if (w < 1)
+        w = 1;
+
+      *front = *back;
+
+      emit_attr(ct, back->fg, back->bg);
+
+      if (w > 1 && x >= ct->w - (w - 1)) {
+        for (int i = x; i < ct->w; i++) {
+          buf_char(&ct->out, ' ');
+        }
+      } else {
+        uint32_t ch = back->ch;
+        if (!iswprint(ch))
+          ch = 0xfffd;
+        buf_char(&ct->out, ch);
+        for (int i = 1; i < w; i++) {
+          Cell *fw = cell_at(ct, ct->front, x + i, y);
+          fw->ch = 0xffffffff;
+          fw->fg = 0xffffffff;
+          fw->bg = 0xffffffff;
         }
       }
       x += w;
@@ -352,7 +401,7 @@ int clayterm_size(int w, int h) {
 
 static void clay_error(Clay_ErrorData err) { (void)err; }
 
-struct Clayterm *init(void *mem, int w, int h, int row) {
+struct Clayterm *init(void *mem, int w, int h) {
   struct Clayterm *ct = (struct Clayterm *)mem;
   int cell_count = w * h;
   int cell_bytes = align8(cell_count * (int)sizeof(Cell));
@@ -369,7 +418,6 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
   *ct = (struct Clayterm){
       .w = w,
       .h = h,
-      .row = row,
       .front = (Cell *)base,
       .back = (Cell *)(base + cell_bytes),
       .out = {base + cell_bytes * 2, 0, cell_count * OUT_BYTES_PER_CELL},
@@ -379,12 +427,15 @@ struct Clayterm *init(void *mem, int w, int h, int row) {
       .lasty = -1,
   };
 
-  cells_clear(ct->front, w, h);
-  cells_clear(ct->back, w, h);
+  // initialize back buffer with spaces and default fg/bg
+  cells_fill(ct->back, w, h, ' ', ATTR_DEFAULT, ATTR_DEFAULT);
+
+  // initialize front buffer with zeros. Every cell will be
+  cells_fill(ct->front, w, h, 0, 0, 0);
   return ct;
 }
 
-void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
+void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
   int i = 0;
   uint32_t idx = 0;
 
@@ -514,7 +565,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
   ct->lastfg = ct->lastbg = 0xffffffff;
   ct->lastx = ct->lasty = -1;
 
-  cells_clear(ct->back, ct->w, ct->h);
+  cells_fill(ct->back, ct->w, ct->h, ' ', ATTR_DEFAULT, ATTR_DEFAULT);
 
   /* walk Clay render commands into back buffer */
   for (int32_t j = 0; j < cmds.length; j++) {
@@ -550,8 +601,11 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
     }
   }
 
-  /* diff front vs back, emit escape sequences */
-  present(ct);
+  if (mode == 1) {
+    present_lines(ct);
+  } else {
+    present_cups(ct, row);
+  }
 }
 
 char *output(struct Clayterm *ct) { return ct->out.data; }

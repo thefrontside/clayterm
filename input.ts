@@ -361,14 +361,14 @@ export interface CursorEvent {
   type: "cursor";
 
   /**
-   * Cursor row (0-based).
+   * Cursor row (1-based). Matches ECMA-48 DSR native format.
    */
-  top: number;
+  row: number;
 
   /**
-   * Cursor column (0-based).
+   * Cursor column (1-based). Matches ECMA-48 DSR native format.
    */
-  left: number;
+  column: number;
 }
 
 import type { PointerEvent } from "./term.ts";
@@ -682,7 +682,7 @@ function mapEvent(native: NativeInputEvent): InputEvent {
       return { type: "resize", width: native.w, height: native.h };
     }
     case EVENT_CURSOR: {
-      return { type: "cursor", top: native.y, left: native.x };
+      return { type: "cursor", row: native.y, column: native.x };
     }
     default: {
       return mapKeyEvent(native);

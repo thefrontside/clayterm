@@ -24,7 +24,7 @@ typedef struct {
 #define ATTR_MASK 0xFF000000
 #define COLOR_MASK 0x00FFFFFF
 
-void cells_clear(Cell *buf, int w, int h);
+void cells_fill(Cell *buf, int w, int h, uint32_t ch, uint32_t fg, uint32_t bg);
 int cell_cmp(Cell *a, Cell *b);
 
 #endif

@@ -1,3 +1,12 @@
+import {
+  ALTSCREEN,
+  CSI,
+  ESC,
+  HIDECURSOR,
+  MAINSCREEN,
+  SHOWCURSOR,
+} from "./termcodes.ts";
+
 export interface Setting {
   apply: Uint8Array;
   revert: Uint8Array;
@@ -12,47 +21,50 @@ export function settings(...sequence: Setting[]): Setting {
 
 export function alternateBuffer(): Setting {
   return {
-    apply: csi("?1049h"),
-    revert: csi("?1049l"),
+    apply: ALTSCREEN(),
+    revert: MAINSCREEN(),
   };
 }
 
 export function cursor(visible: boolean): Setting {
   if (visible) {
     return {
-      apply: csi("?25h"),
-      revert: csi("?25l"),
+      apply: SHOWCURSOR(),
+      revert: HIDECURSOR(),
     };
   } else {
     return {
-      apply: csi("?25l"),
-      revert: csi("?25h"),
+      apply: HIDECURSOR(),
+      revert: SHOWCURSOR(),
     };
   }
 }
 
+/**
+ * Save and restore cursor position using DECSC (`ESC 7`) / DECRC (`ESC 8`).
+ *
+ * @see {@link https://vt100.net/docs/vt510-rm/DECSC.html | VT510 DECSC}
+ * @see {@link https://vt100.net/docs/vt510-rm/DECRC.html | VT510 DECRC}
+ */
+export function saveCursorPosition(): Setting {
+  return {
+    apply: ESC("7"),
+    revert: ESC("8"),
+  };
+}
+
 export function progressiveInput(level: number): Setting {
   return {
-    apply: csi(`>${level}u`),
-    revert: csi("<u"),
+    apply: CSI(`>${level}u`),
+    revert: CSI("<u"),
   };
 }
 
 export function mouseTracking(): Setting {
   return {
-    apply: concat([csi("?1003h"), csi("?1006h")]),
-    revert: concat([csi("?1006l"), csi("?1003l")]),
+    apply: concat([CSI("?1003h"), CSI("?1006h")]),
+    revert: concat([CSI("?1006l"), CSI("?1003l")]),
   };
-}
-
-let encoder = new TextEncoder();
-
-function encode(str: string): Uint8Array {
-  return encoder.encode(str);
-}
-
-function csi(str: string): Uint8Array {
-  return encode(`\x1b[${str}`);
 }
 
 function concat(arrays: Uint8Array[]): Uint8Array {

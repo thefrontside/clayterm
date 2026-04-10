@@ -2,7 +2,7 @@ export interface Native {
   memory: WebAssembly.Memory;
   statePtr: number;
   opsBuf: number;
-  reduce(ct: number, buf: number, len: number): void;
+  reduce(ct: number, buf: number, len: number, mode: number, row: number): void;
   output(ct: number): number;
   length(ct: number): number;
   setPointer(x: number, y: number, down: boolean): void;
@@ -14,7 +14,6 @@ import { compiled } from "./wasm.ts";
 export async function createTermNative(
   w: number,
   h: number,
-  row: number = 0,
 ): Promise<Native> {
   let memory = new WebAssembly.Memory({ initial: 2 });
   let exports: Record<string, CallableFunction> = {};
@@ -47,8 +46,14 @@ export async function createTermNative(
   let ct = exports as unknown as {
     __heap_base: WebAssembly.Global;
     clayterm_size(w: number, h: number): number;
-    init(mem: number, w: number, h: number, row: number): number;
-    reduce(ct: number, buf: number, len: number): void;
+    init(mem: number, w: number, h: number): number;
+    reduce(
+      ct: number,
+      buf: number,
+      len: number,
+      mode: number,
+      row: number,
+    ): void;
     output(ct: number): number;
     length(ct: number): number;
     Clay_SetPointerState(vec: number, down: number): void;
@@ -68,7 +73,7 @@ export async function createTermNative(
     memory.grow(pages - current);
   }
 
-  let statePtr = ct.init(heap, w, h, row);
+  let statePtr = ct.init(heap, w, h);
   let opsBuf = (heap + size + 3) & ~3;
 
   return {
