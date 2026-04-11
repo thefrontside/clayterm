@@ -69,6 +69,22 @@ function gutterText(lineNum: number | null, width: number): string {
   return " ".repeat(Math.max(0, pad)) + num + " │";
 }
 
+function thumbGeometry(
+  v: Virtualizer,
+  viewportHeight: number,
+): { thumbPos: number; thumbSize: number } {
+  let vp = v.resolveViewport();
+  let total = vp.totalEstimatedVisualRows;
+  let current = vp.currentEstimatedVisualRow;
+  let thumbSize = total > viewportHeight
+    ? Math.max(1, Math.round(viewportHeight * viewportHeight / total))
+    : viewportHeight;
+  let thumbPos = total > 1
+    ? Math.round(current / Math.max(total - 1, 1) * (viewportHeight - thumbSize))
+    : 0;
+  return { thumbPos, thumbSize };
+}
+
 function buildOps(
   v: Virtualizer,
   columns: number,
@@ -79,15 +95,7 @@ function buildOps(
   let gw = gutterWidth(v);
   let viewportHeight = rows - 1;
 
-  // Scrollbar geometry
-  let total = vp.totalEstimatedVisualRows;
-  let current = vp.currentEstimatedVisualRow;
-  let thumbSize = total > viewportHeight
-    ? Math.max(1, Math.round(viewportHeight * viewportHeight / total))
-    : viewportHeight;
-  let thumbPos = total > 1
-    ? Math.round(current / Math.max(total - 1, 1) * (viewportHeight - thumbSize))
-    : 0;
+  let { thumbPos, thumbSize } = thumbGeometry(v, viewportHeight);
 
   // Root
   ops.push(open("root", {
@@ -166,7 +174,7 @@ function buildOps(
   // Status bar
   let bottomLabel = vp.isAtBottom ? "  BOTTOM" : "";
   let status =
-    ` lines: ${v.lineCount}  row ${current}/${total}${bottomLabel}  j/k:scroll  g/G:top/bottom  q:quit`;
+    ` lines: ${v.lineCount}  row ${vp.currentEstimatedVisualRow}/${vp.totalEstimatedVisualRows}${bottomLabel}  j/k:scroll  g/G:top/bottom  q:quit`;
   ops.push(
     open("status", {
       layout: {
@@ -240,6 +248,8 @@ function handleEvent(
   event: InputEvent,
   v: Virtualizer,
   viewportRows: number,
+  columns: number,
+  drag: { active: boolean; offset: number },
 ): boolean {
   if (event.type === "keydown" && event.ctrl && event.key === "c") return true;
   if (event.type === "keydown" && event.key === "q") return true;
@@ -279,6 +289,32 @@ function handleEvent(
 
   if (event.type === "wheel") {
     v.scrollBy(event.direction === "down" ? 3 : -3);
+  }
+
+  if (
+    event.type === "mousedown" &&
+    event.button === "left" &&
+    event.x === columns - 1 &&
+    event.y < viewportRows
+  ) {
+    let { thumbPos, thumbSize } = thumbGeometry(v, viewportRows);
+    if (event.y >= thumbPos && event.y < thumbPos + thumbSize) {
+      drag.active = true;
+      drag.offset = event.y - thumbPos;
+    } else {
+      let fraction = event.y / Math.max(viewportRows - thumbSize, 1);
+      v.scrollToFraction(Math.min(Math.max(fraction, 0), 1));
+    }
+  }
+
+  if (event.type === "mousemove" && drag.active) {
+    let { thumbSize } = thumbGeometry(v, viewportRows);
+    let fraction = (event.y - drag.offset) / Math.max(viewportRows - thumbSize, 1);
+    v.scrollToFraction(Math.min(Math.max(fraction, 0), 1));
+  }
+
+  if (event.type === "mouseup") {
+    drag.active = false;
   }
 
   return false;
@@ -332,14 +368,17 @@ await main(function* () {
     Deno.stdout.writeSync(tty.revert);
   });
 
+  let drag = { active: false, offset: 0 };
+
   // Initial render
   Deno.stdout.writeSync(term.render(buildOps(v, columns, rows)).output);
 
   for (let event of yield* each(input)) {
-    let quit = handleEvent(event, v, viewportRows);
+    let quit = handleEvent(event, v, viewportRows, columns, drag);
     if (quit) break;
 
     if (event.type === "resize") {
+      drag.active = false;
       columns = event.width;
       rows = event.height;
       viewportRows = rows - 1;
