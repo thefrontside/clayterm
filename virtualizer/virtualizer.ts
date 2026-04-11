@@ -135,8 +135,46 @@ export class Virtualizer {
     return newLineIndex;
   }
 
-  resize(_columns: number, _rows: number): void {
-    throw new Error("not implemented");
+  /**
+   * resize(columns, rows) — §10.3
+   *
+   * On column-width change: clear wrap cache, recompute estimation,
+   * clamp anchor sub-row, recompute currentEstimatedVisualRow.
+   * On row-only change: just update rows.
+   */
+  resize(columns: number, rows: number): void {
+    if (columns !== this._columns) {
+      // Column width changed — invalidate wrap cache (INV-5)
+      this._wrapCache.clear();
+
+      // Recompute totalEstimatedVisualRows with new column width
+      let newTotal = 0;
+      let baseIndex = this._ringBuffer.baseIndex;
+      for (let i = baseIndex; i < baseIndex + this._ringBuffer.lineCount; i++) {
+        let entry = this._ringBuffer.get(i);
+        if (!entry) break;
+        newTotal += Math.max(1, Math.ceil(entry.displayWidth / columns));
+      }
+      this._totalEstimatedVisualRows = newTotal;
+
+      // Clamp anchor sub-row at new width
+      if (this._ringBuffer.lineCount > 0) {
+        let anchorEntry = this._ringBuffer.get(this._anchorLineIndex);
+        if (anchorEntry) {
+          let newEstimate = Math.max(1, Math.ceil(anchorEntry.displayWidth / columns));
+          if (this._anchorSubRow >= newEstimate) {
+            this._anchorSubRow = newEstimate - 1;
+          }
+        }
+      }
+
+      this._columns = columns;
+
+      // Recompute currentEstimatedVisualRow
+      this._recomputeCurrentEstimate();
+    }
+
+    this._rows = rows;
   }
 
   /**
