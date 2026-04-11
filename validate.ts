@@ -74,6 +74,10 @@ const Border = Type.Object({
 const Clip = Type.Object({
   horizontal: Type.Optional(Type.Boolean()),
   vertical: Type.Optional(Type.Boolean()),
+  childOffset: Type.Optional(Type.Object({
+    x: Type.Optional(Type.Number()),
+    y: Type.Optional(Type.Number()),
+  })),
 });
 
 const Floating = Type.Object({

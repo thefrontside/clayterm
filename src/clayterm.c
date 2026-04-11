@@ -458,6 +458,8 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len) {
         uint32_t cl = rd(buf, len, &i);
         decl.clip.horizontal = cl & 0xff;
         decl.clip.vertical = (cl >> 8) & 0xff;
+        decl.clip.childOffset.x = rdf(buf, len, &i);
+        decl.clip.childOffset.y = rdf(buf, len, &i);
       }
 
       if (mask & PROP_FLOATING) {

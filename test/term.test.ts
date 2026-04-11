@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "./suite.ts";
 import { createTerm, type Term } from "../term.ts";
-import { close, grow, open, rgba, text } from "../ops.ts";
+import { close, fixed, grow, open, rgba, text } from "../ops.ts";
 import { print } from "./print.ts";
 
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -87,6 +87,41 @@ describe("term", () => {
 │                                      │
 │                                      │
 ╰──────────────────────────────────────╯`.trim());
+  });
+
+  it("clips children with horizontal child offsets", () => {
+    let out = print(
+      decode(
+        term.render([
+          open("root", {
+            layout: { width: fixed(40), height: fixed(10), direction: "ttb" },
+          }),
+          open("viewport", {
+            layout: { width: fixed(8), height: fixed(1) },
+            clip: { horizontal: true, childOffset: { x: -2 } },
+          }),
+          open("track", {
+            layout: { width: fixed(12), height: fixed(1), direction: "ltr" },
+          }),
+          open("a", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("ABCD"),
+          close(),
+          open("b", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("EFGH"),
+          close(),
+          open("c", { layout: { width: fixed(4), height: fixed(1) } }),
+          text("IJKL"),
+          close(),
+          close(),
+          close(),
+          close(),
+        ]).output,
+      ),
+      40,
+      10,
+    );
+
+    expect(out.split("\n")[0]).toBe("CDEFGHIJ                                ");
   });
 
   describe("row offset", () => {

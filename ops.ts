@@ -157,6 +157,10 @@ export function pack(
             true,
           );
           o += 4;
+          view.setFloat32(o, op.clip.childOffset?.x ?? 0, true);
+          o += 4;
+          view.setFloat32(o, op.clip.childOffset?.y ?? 0, true);
+          o += 4;
         }
 
         if (op.floating) {
@@ -268,7 +272,11 @@ export interface OpenElement {
     top?: number;
     bottom?: number;
   };
-  clip?: { horizontal?: boolean; vertical?: boolean };
+  clip?: {
+    horizontal?: boolean;
+    vertical?: boolean;
+    childOffset?: { x?: number; y?: number };
+  };
   floating?: {
     x?: number;
     y?: number;
