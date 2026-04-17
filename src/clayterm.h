@@ -17,6 +17,14 @@ char *output(struct Clayterm *ct);
 int length(struct Clayterm *ct);
 void measure(int ret, int txt);
 
+int element_info_count(void);
+int element_info_name_len(int index);
+int element_info_name_ptr(int index);
+float element_info_x(int index);
+float element_info_y(int index);
+float element_info_w(int index);
+float element_info_h(int index);
+
 int pointer_over_count(void);
 int pointer_over_id_string_length(int index);
 int pointer_over_id_string_ptr(int index);

@@ -1,3 +1,11 @@
+export interface ElementInfo {
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface Native {
   memory: WebAssembly.Memory;
   statePtr: number;
@@ -7,6 +15,7 @@ export interface Native {
   length(ct: number): number;
   setPointer(x: number, y: number, down: boolean): void;
   getPointerOverIds(): string[];
+  getElementInfo(): ElementInfo[];
 }
 
 import { compiled } from "./wasm.ts";
@@ -60,6 +69,13 @@ export async function createTermNative(
     pointer_over_count(): number;
     pointer_over_id_string_length(index: number): number;
     pointer_over_id_string_ptr(index: number): number;
+    element_info_count(): number;
+    element_info_name_len(index: number): number;
+    element_info_name_ptr(index: number): number;
+    element_info_x(index: number): number;
+    element_info_y(index: number): number;
+    element_info_w(index: number): number;
+    element_info_h(index: number): number;
   };
 
   let heap = ct.__heap_base.value as number;
@@ -100,6 +116,25 @@ export async function createTermNative(
         ids.push(decoder.decode(new Uint8Array(memory.buffer, ptr, len)));
       }
       return ids;
+    },
+    getElementInfo(): ElementInfo[] {
+      let decoder = new TextDecoder();
+      let count = ct.element_info_count();
+      let result: ElementInfo[] = [];
+      for (let i = 0; i < count; i++) {
+        let len = ct.element_info_name_len(i);
+        if (len === 0) continue;
+        let ptr = ct.element_info_name_ptr(i);
+        let name = decoder.decode(new Uint8Array(memory.buffer, ptr, len));
+        result.push({
+          name,
+          x: ct.element_info_x(i),
+          y: ct.element_info_y(i),
+          width: ct.element_info_w(i),
+          height: ct.element_info_h(i),
+        });
+      }
+      return result;
     },
   };
 }

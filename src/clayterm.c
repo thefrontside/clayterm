@@ -32,6 +32,27 @@
 #define PROP_CLIP 0x10
 #define PROP_FLOATING 0x20
 
+/* ── Element info ─────────────────────────────────────────────────── */
+
+#define MAX_ELEMENT_INFO 512
+
+struct ElementEntry {
+  const char *name;
+  int name_len;
+  Clay_ElementId eid;
+};
+
+struct ElementInfo {
+  const char *name;
+  int name_len;
+  float x, y, w, h;
+};
+
+static struct ElementEntry g_entries[MAX_ELEMENT_INFO];
+static int g_entry_count;
+static struct ElementInfo g_info[MAX_ELEMENT_INFO];
+static int g_info_count;
+
 /* ── Instance state ───────────────────────────────────────────────── */
 
 struct Clayterm {
@@ -438,6 +459,8 @@ struct Clayterm *init(void *mem, int w, int h) {
 void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
   int i = 0;
   uint32_t idx = 0;
+  g_entry_count = 0;
+  g_info_count = 0;
 
   Clay_BeginLayout();
 
@@ -456,6 +479,13 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
         Clay_String str = {.length = (int32_t)id_len, .chars = id_chars};
         Clay_ElementId eid = Clay__HashString(str, idx++);
         Clay__OpenElementWithId(eid);
+
+        if (g_entry_count < MAX_ELEMENT_INFO) {
+          struct ElementEntry *entry = &g_entries[g_entry_count++];
+          entry->name = id_chars;
+          entry->name_len = (int)id_len;
+          entry->eid = eid;
+        }
       } else {
         Clay__OpenElement();
       }
@@ -560,6 +590,20 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
 
   Clay_RenderCommandArray cmds = Clay_EndLayout();
 
+  /* resolve element bounding boxes */
+  for (int k = 0; k < g_entry_count; k++) {
+    Clay_ElementData data = Clay_GetElementData(g_entries[k].eid);
+    if (data.found) {
+      struct ElementInfo *info = &g_info[g_info_count++];
+      info->name = g_entries[k].name;
+      info->name_len = g_entries[k].name_len;
+      info->x = data.boundingBox.x;
+      info->y = data.boundingBox.y;
+      info->w = data.boundingBox.width;
+      info->h = data.boundingBox.height;
+    }
+  }
+
   /* reset output state */
   ct->out.length = 0;
   ct->lastfg = ct->lastbg = 0xffffffff;
@@ -611,6 +655,25 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
 char *output(struct Clayterm *ct) { return ct->out.data; }
 
 int length(struct Clayterm *ct) { return ct->out.length; }
+
+int element_info_count(void) { return g_info_count; }
+
+int element_info_name_len(int index) {
+  if (index >= g_info_count)
+    return 0;
+  return g_info[index].name_len;
+}
+
+int element_info_name_ptr(int index) {
+  if (index >= g_info_count)
+    return 0;
+  return (int)g_info[index].name;
+}
+
+float element_info_x(int index) { return g_info[index].x; }
+float element_info_y(int index) { return g_info[index].y; }
+float element_info_w(int index) { return g_info[index].w; }
+float element_info_h(int index) { return g_info[index].h; }
 
 int pointer_over_count(void) { return Clay_GetPointerOverIds().length; }
 

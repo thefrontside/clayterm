@@ -32,9 +32,14 @@ export type PointerEvent =
   | { type: "pointerleave"; id: string }
   | { type: "pointerclick"; id: string };
 
+export interface RenderInfo {
+  dimensions: { x: number; y: number; width: number; height: number };
+}
+
 export interface RenderResult {
   output: Uint8Array;
   events: PointerEvent[];
+  info: Map<string, RenderInfo>;
 }
 
 export interface Term {
@@ -103,7 +108,21 @@ export async function createTerm(options: TermOptions): Promise<Term> {
       prev = current;
       wasDown = down;
 
-      return { output, events };
+      let info = new Map<string, RenderInfo>();
+      for (let el of native.getElementInfo()) {
+        if (!info.has(el.name)) {
+          info.set(el.name, {
+            dimensions: {
+              x: el.x,
+              y: el.y,
+              width: el.width,
+              height: el.height,
+            },
+          });
+        }
+      }
+
+      return { output, events, info };
     },
   };
 }
