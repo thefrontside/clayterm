@@ -38,6 +38,23 @@ export interface ElementInfo {
   bounds: BoundingBox;
 }
 
+const ERROR_TYPES = [
+  "TEXT_MEASUREMENT_FUNCTION_NOT_PROVIDED",
+  "ARENA_CAPACITY_EXCEEDED",
+  "ELEMENTS_CAPACITY_EXCEEDED",
+  "TEXT_MEASUREMENT_CAPACITY_EXCEEDED",
+  "DUPLICATE_ID",
+  "FLOATING_CONTAINER_PARENT_NOT_FOUND",
+  "PERCENTAGE_OVER_1",
+  "INTERNAL_ERROR",
+  "UNBALANCED_OPEN_CLOSE",
+] as const;
+
+export interface ClayError {
+  type: string;
+  message: string;
+}
+
 export interface RenderInfo {
   get(id: string): ElementInfo | undefined;
 }
@@ -46,6 +63,7 @@ export interface RenderResult {
   output: Uint8Array;
   events: PointerEvent[];
   info: RenderInfo;
+  errors: ClayError[];
 }
 
 export interface Term {
@@ -124,7 +142,17 @@ export async function createTerm(options: TermOptions): Promise<Term> {
         },
       };
 
-      return { output, events, info };
+      let errors: ClayError[] = [];
+      let count = native.errorCount(statePtr);
+      for (let i = 0; i < count; i++) {
+        let code = native.errorType(statePtr, i);
+        errors.push({
+          type: ERROR_TYPES[code] ?? `UNKNOWN_${code}`,
+          message: native.errorMessage(statePtr, i),
+        });
+      }
+
+      return { output, events, info, errors };
     },
   };
 }
