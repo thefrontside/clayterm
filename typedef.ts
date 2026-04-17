@@ -56,6 +56,11 @@ export function array<T>(element: TypeDef<T>, length: number): Arr<T[]> {
   };
 }
 
+export const f32 = (): TypeDef<number> => ({
+  type: "f32",
+  byteLength: 4,
+  byteAlign: 4,
+});
 export const int32 = (): TypeDef<number> => ({
   type: "int32",
   byteLength: 4,

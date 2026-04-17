@@ -17,6 +17,8 @@ char *output(struct Clayterm *ct);
 int length(struct Clayterm *ct);
 void measure(int ret, int txt);
 
+int get_element_bounds(const char *name, int name_len, float *out);
+
 int pointer_over_count(void);
 int pointer_over_id_string_length(int index);
 int pointer_over_id_string_ptr(int index);

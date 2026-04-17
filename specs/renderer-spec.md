@@ -631,7 +631,7 @@ prevent overlap.
 ### 12.3 Render return type
 
 The `render()` method currently returns a `RenderResult` object shaped as
-`{ output: Uint8Array, events: PointerEvent[] }`.
+`{ output: Uint8Array, events: PointerEvent[], info: RenderInfo }`.
 
 The `output` field is the ANSI byte output specified normatively in Section 7.3
 and Section 8.2.
@@ -642,6 +642,34 @@ a pointer-events feature implementation. The pointer event model is functional
 but has acknowledged gaps (no modifier keys on click events) and its interaction
 protocol (passing pointer state via render options, then reading events from the
 return value) was arrived at through iteration rather than upfront design.
+
+The `info` field implements `RenderInfo`, a read-only lookup keyed by element id
+(the `id` parameter passed to `open()`):
+
+```
+interface RenderInfo {
+  get(id: string): ElementInfo | undefined;
+}
+
+interface ElementInfo {
+  bounds: BoundingBox;
+}
+
+interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+```
+
+Each `ElementInfo` provides post-layout metadata. The `bounds` field is the
+element's computed bounding box in character cells, as determined by the layout
+engine after the render transaction completes. `x` and `y` are zero-indexed from
+the top-left corner of the layout root.
+
+Querying an element with an empty-string id or an id not present in the frame
+returns `undefined`.
 
 The return type of `render()` has changed twice since the project's inception
 (string, then `Uint8Array`, then `RenderResult`). While the ANSI bytes
