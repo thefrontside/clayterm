@@ -89,13 +89,13 @@ const Floating = Type.Object({
   zIndex: Type.Optional(u16),
 });
 
-/* ── Op types (discriminated on `id`) ─────────────────────────────── */
+/* ── Op types (discriminated on `directive`) ──────────────────────── */
 
-const CloseElement = Type.Object({ id: Type.Literal(0x04) });
+const CloseElement = Type.Object({ directive: Type.Literal(0x04) });
 
 const OpenElement = Type.Object({
-  id: Type.Literal(0x02),
-  name: Type.String(),
+  directive: Type.Literal(0x02),
+  id: Type.String(),
   layout: Type.Optional(Layout),
   bg: Type.Optional(rgba),
   cornerRadius: Type.Optional(CornerRadius),
@@ -105,7 +105,7 @@ const OpenElement = Type.Object({
 });
 
 const TextOp = Type.Object({
-  id: Type.Literal(0x03),
+  directive: Type.Literal(0x03),
   content: Type.String(),
   color: Type.Optional(rgba),
   fontSize: Type.Optional(u8),

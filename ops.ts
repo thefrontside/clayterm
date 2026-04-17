@@ -11,8 +11,6 @@ const PROP_BORDER = 0x08;
 const PROP_CLIP = 0x10;
 const PROP_FLOATING = 0x20;
 
-/* ── Packing ──────────────────────────────────────────────────────── */
-
 const encoder = new TextEncoder();
 
 function packAxis(view: DataView, offset: number, axis: SizingAxis): number {
@@ -73,9 +71,9 @@ export function pack(
   let o = offset;
 
   for (let op of ops) {
-    switch (op.id) {
+    switch (op.directive) {
       case OP_CLOSE_ELEMENT:
-        view.setUint32(o, op.id, true);
+        view.setUint32(o, op.directive, true);
         o += 4;
         break;
 
@@ -83,8 +81,8 @@ export function pack(
         view.setUint32(o, OP_OPEN_ELEMENT, true);
         o += 4;
 
-        let id = encoder.encode(op.name);
-        o = packString(view, id, o);
+        let bytes = encoder.encode(op.id);
+        o = packString(view, bytes, o);
 
         let mask = 0;
         if (op.layout) mask |= PROP_LAYOUT;
@@ -210,14 +208,10 @@ export function pack(
   return (o - offset) / 4;
 }
 
-/* ── Color ────────────────────────────────────────────────────────── */
-
 export function rgba(r: number, g: number, b: number, a = 255): number {
   return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) |
     (b & 0xFF);
 }
-
-/* ── Sizing axis types ────────────────────────────────────────────── */
 
 export type SizingAxis =
   | { type: "fit"; min?: number; max?: number }
@@ -241,15 +235,13 @@ export const percent = (value: number): SizingAxis => ({
 });
 export const fixed = (value: number): SizingAxis => ({ type: "fixed", value });
 
-/* ── Op descriptors ───────────────────────────────────────────────── */
-
 export interface CloseElement {
-  id: typeof OP_CLOSE_ELEMENT;
+  directive: typeof OP_CLOSE_ELEMENT;
 }
 
 export interface OpenElement {
-  id: typeof OP_OPEN_ELEMENT;
-  name: string;
+  directive: typeof OP_OPEN_ELEMENT;
+  id: string;
   layout?: {
     width?: SizingAxis;
     height?: SizingAxis;
@@ -280,7 +272,7 @@ export interface OpenElement {
 }
 
 export interface Text {
-  id: typeof OP_TEXT;
+  directive: typeof OP_TEXT;
   content: string;
   color?: number;
   fontSize?: number;
@@ -291,22 +283,20 @@ export interface Text {
 
 export type Op = OpenElement | Text | CloseElement;
 
-/* ── Descriptor constructors ──────────────────────────────────────── */
-
 export function open(
-  name: string,
-  props: Omit<OpenElement, "id" | "name"> = {},
+  id: string,
+  props: Omit<OpenElement, "directive" | "id"> = {},
 ): OpenElement {
-  return { id: OP_OPEN_ELEMENT, name, ...props };
+  return { directive: OP_OPEN_ELEMENT, id, ...props };
 }
 
 export function text(
   content: string,
-  props: Omit<Text, "id" | "content"> = {},
+  props: Omit<Text, "directive" | "content"> = {},
 ): Text {
-  return { id: OP_TEXT, content, ...props };
+  return { directive: OP_TEXT, content, ...props };
 }
 
 export function close(): CloseElement {
-  return { id: OP_CLOSE_ELEMENT };
+  return { directive: OP_CLOSE_ELEMENT };
 }

@@ -19,16 +19,16 @@ describe("validate", () => {
     expect(validate([])).toBe(true);
   });
 
-  it("rejects ops with wrong id", () => {
-    expect(validate([{ id: 0xff }])).toBe(false);
+  it("rejects ops with wrong directive", () => {
+    expect(validate([{ directive: 0xff }])).toBe(false);
   });
 
-  it("rejects open element missing name", () => {
-    expect(validate([{ id: 0x02 }])).toBe(false);
+  it("rejects open element missing id", () => {
+    expect(validate([{ directive: 0x02 }])).toBe(false);
   });
 
   it("rejects text missing content", () => {
-    expect(validate([{ id: 0x03 }])).toBe(false);
+    expect(validate([{ directive: 0x03 }])).toBe(false);
   });
 
   it("rejects non-array", () => {
@@ -40,7 +40,7 @@ describe("validate", () => {
   });
 
   it("assert throws TypeError on bad input", () => {
-    expect(() => assert([{ id: 0x02 }])).toThrow(TypeError);
+    expect(() => assert([{ directive: 0x02 }])).toThrow(TypeError);
   });
 
   it("rejects padding > 255 (u8 overflow)", () => {
@@ -106,6 +106,6 @@ describe("validated", () => {
 
   it("throws on invalid ops", () => {
     // deno-lint-ignore no-explicit-any
-    expect(() => term.render([{ id: 0xff }] as any)).toThrow(TypeError);
+    expect(() => term.render([{ directive: 0xff }] as any)).toThrow(TypeError);
   });
 });
