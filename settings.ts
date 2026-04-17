@@ -19,9 +19,11 @@ export function settings(...sequence: Setting[]): Setting {
   };
 }
 
-export function alternateBuffer(): Setting {
+export function alternateBuffer(
+  options?: { clear?: boolean },
+): Setting {
   return {
-    apply: ALTSCREEN(),
+    apply: ALTSCREEN(options),
     revert: MAINSCREEN(),
   };
 }

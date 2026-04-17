@@ -18,6 +18,12 @@ describe("settings", () => {
       expect(str(s.apply)).toBe("\x1b[?1049h");
       expect(str(s.revert)).toBe("\x1b[?1049l");
     });
+
+    it("uses mode 47 when clear is false", () => {
+      let s = alternateBuffer({ clear: false });
+      expect(str(s.apply)).toBe("\x1b[?47h");
+      expect(str(s.revert)).toBe("\x1b[?1049l");
+    });
   });
 
   describe("cursor", () => {

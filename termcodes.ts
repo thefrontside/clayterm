@@ -55,19 +55,27 @@ export function HIDECURSOR(): Uint8Array {
 }
 
 /**
- * Switch to the alternate screen buffer (xterm private mode 1049).
+ * Switch to the alternate screen buffer.
  *
- * Saves the cursor and switches to a clean alternate screen. Use
- * {@link MAINSCREEN} to switch back.
+ * Saves the cursor and switches to the alternate screen. When `clear` is
+ * `true` (the default), the alternate buffer is cleared on entry. When
+ * `false`, the existing contents are preserved.
+ *
+ * Use {@link MAINSCREEN} to switch back.
  *
  * @see {@link https://invisible-island.net/xterm/ctlseqs/ctlseqs.html | xterm control sequences}
  */
-export function ALTSCREEN(): Uint8Array {
-  return CSI("?1049h");
+export function ALTSCREEN(options?: { clear?: boolean }): Uint8Array {
+  let { clear = true } = options ?? {};
+  if (clear) {
+    return CSI("?1049h");
+  } else {
+    return CSI("?47h");
+  }
 }
 
 /**
- * Switch back to the main screen buffer (xterm private mode 1049).
+ * Switch back to the main screen buffer.
  *
  * Restores the cursor and returns to the main screen with scrollback intact.
  *
