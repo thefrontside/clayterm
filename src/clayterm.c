@@ -7,6 +7,8 @@
  *   output         — pointer to output byte buffer
  *   length         — length of output byte buffer
  *   measure        — Clay text measurement callback
+ *   error_count, error_type, error_message_length, error_message_ptr
+ *                  — per-render Clay error accessors
  */
 
 #include "clayterm.h"
@@ -34,6 +36,8 @@
 
 /* ── Instance state ───────────────────────────────────────────────── */
 
+#define MAX_ERRORS 32
+
 struct Clayterm {
   int w, h;
   Cell *front;
@@ -44,6 +48,9 @@ struct Clayterm {
   /* clip region */
   int clipx, clipy, clipw, cliph;
   int clipping;
+  /* error collection */
+  Clay_ErrorData errors[MAX_ERRORS];
+  int error_count;
 };
 
 /* Memory layout inside the arena provided by the host:
@@ -399,7 +406,32 @@ int clayterm_size(int w, int h) {
          + align64(clay_bytes); /* Clay arena */
 }
 
-static void clay_error(Clay_ErrorData err) { (void)err; }
+static void clay_error(Clay_ErrorData err) {
+  struct Clayterm *ct = (struct Clayterm *)err.userData;
+  if (ct->error_count < MAX_ERRORS) {
+    ct->errors[ct->error_count++] = err;
+  }
+}
+
+int error_count(struct Clayterm *ct) { return ct->error_count; }
+
+int error_type(struct Clayterm *ct, int index) {
+  if (index < 0 || index >= ct->error_count)
+    return -1;
+  return (int)ct->errors[index].errorType;
+}
+
+int error_message_length(struct Clayterm *ct, int index) {
+  if (index < 0 || index >= ct->error_count)
+    return 0;
+  return ct->errors[index].errorText.length;
+}
+
+int error_message_ptr(struct Clayterm *ct, int index) {
+  if (index < 0 || index >= ct->error_count)
+    return 0;
+  return (int)ct->errors[index].errorText.chars;
+}
 
 struct Clayterm *init(void *mem, int w, int h) {
   struct Clayterm *ct = (struct Clayterm *)mem;
@@ -413,7 +445,7 @@ struct Clayterm *init(void *mem, int w, int h) {
   Clay_Arena arena =
       Clay_CreateArenaWithCapacityAndMemory(clay_bytes, clay_mem);
   Clay_Initialize(arena, (Clay_Dimensions){(float)w, (float)h},
-                  (Clay_ErrorHandler){clay_error, 0});
+                  (Clay_ErrorHandler){clay_error, ct});
 
   *ct = (struct Clayterm){
       .w = w,
@@ -437,6 +469,7 @@ struct Clayterm *init(void *mem, int w, int h) {
 
 void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
   int i = 0;
+  ct->error_count = 0;
 
   Clay_BeginLayout();
 

@@ -631,7 +631,7 @@ prevent overlap.
 ### 12.3 Render return type
 
 The `render()` method currently returns a `RenderResult` object shaped as
-`{ output: Uint8Array, events: PointerEvent[], info: RenderInfo }`.
+`{ output: Uint8Array, events: PointerEvent[], info: RenderInfo, errors: ClayError[] }`.
 
 The `output` field is the ANSI byte output specified normatively in Section 7.3
 and Section 8.2.
@@ -670,6 +670,25 @@ the top-left corner of the layout root.
 
 Querying an element with an empty-string id or an id not present in the frame
 returns `undefined`.
+
+The `errors` field contains any errors reported by the Clay layout engine during
+the most recent `render()` call. Each error is a `ClayError` object with:
+
+- `type`: a string identifying the error category. The following types are
+  defined, matching Clay's error taxonomy:
+  - `"TEXT_MEASUREMENT_FUNCTION_NOT_PROVIDED"`
+  - `"ARENA_CAPACITY_EXCEEDED"`
+  - `"ELEMENTS_CAPACITY_EXCEEDED"`
+  - `"TEXT_MEASUREMENT_CAPACITY_EXCEEDED"`
+  - `"DUPLICATE_ID"`
+  - `"FLOATING_CONTAINER_PARENT_NOT_FOUND"`
+  - `"PERCENTAGE_OVER_1"`
+  - `"INTERNAL_ERROR"`
+  - `"UNBALANCED_OPEN_CLOSE"`
+- `message`: a human-readable string describing the error in detail.
+
+Errors are collected per-render; each call to `render()` returns only the errors
+from that invocation. The array is empty when no errors occurred.
 
 The return type of `render()` has changed twice since the project's inception
 (string, then `Uint8Array`, then `RenderResult`). While the ANSI bytes

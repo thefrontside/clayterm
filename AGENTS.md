@@ -33,3 +33,9 @@
 
 - Directives are plain objects. No classes, no methods, no prototype chains. The
   flat array pattern is normative.
+
+## C code conventions
+
+- No global mutable state. All state belongs on a struct instance (e.g.
+  `Clayterm`). Use Clay's `userData` pointer or similar mechanisms to route
+  callbacks back to the owning instance.

@@ -26,6 +26,9 @@ export interface Native {
   setPointer(x: number, y: number, down: boolean): void;
   getPointerOverIds(): string[];
   getElementBounds(id: string): BoundingBox | undefined;
+  errorCount(ct: number): number;
+  errorType(ct: number, index: number): number;
+  errorMessage(ct: number, index: number): string;
 }
 
 import { compiled } from "./wasm.ts";
@@ -80,6 +83,10 @@ export async function createTermNative(
     pointer_over_id_string_length(index: number): number;
     pointer_over_id_string_ptr(index: number): number;
     get_element_bounds(name: number, len: number, out: number): number;
+    error_count(ct: number): number;
+    error_type(ct: number, index: number): number;
+    error_message_length(ct: number, index: number): number;
+    error_message_ptr(ct: number, index: number): number;
   };
 
   let heap = ct.__heap_base.value as number;
@@ -137,6 +144,19 @@ export async function createTermNative(
         width: view.getFloat32(out + BOUNDING_BOX.width, true),
         height: view.getFloat32(out + BOUNDING_BOX.height, true),
       };
+    },
+    errorCount(ptr: number): number {
+      return ct.error_count(ptr);
+    },
+    errorType(ptr: number, index: number): number {
+      return ct.error_type(ptr, index);
+    },
+    errorMessage(ptr: number, index: number): string {
+      let len = ct.error_message_length(ptr, index);
+      if (len === 0) return "";
+      let p = ct.error_message_ptr(ptr, index);
+      let decoder = new TextDecoder();
+      return decoder.decode(new Uint8Array(memory.buffer, p, len));
     },
   };
 }
