@@ -7,6 +7,7 @@
  *   output         — pointer to output byte buffer
  *   length         — length of output byte buffer
  *   measure        — Clay text measurement callback
+ *   display_width  — per-codepoint wcwidth sum over a UTF-8 string
  */
 
 #include "clayterm.h"
@@ -655,4 +656,33 @@ void measure(int ret, int txt) {
   float *dims = (float *)ret;
   dims[0] = (float)w;
   dims[1] = 1.0f;
+}
+
+/* ── display_width — per-codepoint wcwidth sum ───────────────────── */
+
+/**
+ * Compute the display width of a UTF-8 string by summing max(0, wcwidth(cp))
+ * for each Unicode codepoint. No ANSI skipping — pure per-codepoint sum.
+ *
+ * @param str  Pointer to a UTF-8 encoded string (not necessarily null-terminated).
+ * @param len  Byte length of the string.
+ * @return     Total display width (non-negative).
+ */
+int display_width(const char *str, int len) {
+  int w = 0;
+  const char *p = str;
+  int rem = len;
+  while (rem > 0) {
+    uint32_t cp;
+    int n = utf8_decode(&cp, p);
+    if (n <= 0) {
+      n = 1;
+    }
+    int cw = wcwidth(cp);
+    if (cw > 0)
+      w += cw;
+    p += n;
+    rem -= n;
+  }
+  return w;
 }

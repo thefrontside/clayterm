@@ -1,0 +1,9 @@
+{
+  "name": "@clayterm/virtualizer",
+  "license": "MIT",
+  "exports": { ".": "./mod.ts" },
+  "imports": {
+    "@std/testing": "jsr:@std/testing@1",
+    "@std/expect": "jsr:@std/expect@1"
+  }
+}
