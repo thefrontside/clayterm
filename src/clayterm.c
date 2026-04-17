@@ -1,16 +1,14 @@
 /* clayterm.c — WASM terminal rendering engine for Clay UI
  *
  * Public API (exported to WASM):
- *   clayterm_size        — compute arena size for given dimensions
- *   init                 — initialize a Clayterm instance in provided memory
- *   reduce               — decode command buffer, run Clay layout, render to ANSI
- *   output               — pointer to output byte buffer
- *   length               — length of output byte buffer
- *   measure              — Clay text measurement callback
- *   error_count          — number of errors from last render
- *   error_type           — Clay_ErrorType enum value for error at index
- *   error_message_length — byte length of error message at index
- *   error_message_ptr    — pointer to error message string at index
+ *   clayterm_size  — compute arena size for given dimensions
+ *   init           — initialize a Clayterm instance in provided memory
+ *   reduce         — decode command buffer, run Clay layout, render to ANSI
+ *   output         — pointer to output byte buffer
+ *   length         — length of output byte buffer
+ *   measure        — Clay text measurement callback
+ *   error_count, error_type, error_message_length, error_message_ptr
+ *                  — per-render Clay error accessors
  */
 
 #include "clayterm.h"
