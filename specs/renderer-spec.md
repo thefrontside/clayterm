@@ -225,13 +225,7 @@ stages. The caller MUST NOT need to perform any of these operations.
 symmetric: both calls occur within the same render transaction, in the same
 function scope.
 
-**INV-7. Element identity disambiguation.** When multiple elements within a
-frame share the same id, the renderer MUST disambiguate their identities so that
-the layout engine does not conflate them. The disambiguation mechanism is an
-implementation detail, but the guarantee is normative: identical ids MUST NOT
-cause layout corruption or element conflation.
-
-**INV-8. Separation of concerns.** The rendering concern and the input-parsing
+**INV-7. Separation of concerns.** The rendering concern and the input-parsing
 concern MUST remain independent. Neither MUST depend on the other's state,
 types, or API surface. They MAY share a compiled WASM binary for loading
 efficiency, but this is an implementation convenience, not an architectural
@@ -374,7 +368,8 @@ open(id: string, props?): OpenElement
 
 Creates an element-open directive. The `id` parameter provides an identity for
 the element within the frame, used by the underlying layout engine for element
-tracking and hit-testing. The optional `props` parameter carries configuration
+tracking and hit-testing. IDs MUST be unique within a frame; passing duplicate
+IDs is undefined behavior. The optional `props` parameter carries configuration
 for layout, styling, and behavior.
 
 Elements opened with `open()` MUST be closed with a corresponding `close()`
@@ -473,12 +468,10 @@ transfer mechanism is an implementation detail described in Section 12.1.
 
 ### 9.3 Directive identity
 
-Each element directive is assigned an identity within the frame for use by the
-underlying layout engine. When multiple elements share the same id (the `id`
-parameter to `open()`), the renderer MUST disambiguate their identities
-automatically. The disambiguation mechanism is an implementation detail. The
-normative requirement is that the caller MUST NOT need to provide globally
-unique ids; the renderer handles uniqueness internally.
+Each element directive carries an `id` provided by the caller via `open()`.
+Element IDs MUST be unique within a frame. The renderer uses the ID directly as
+the element's identity for the layout engine. Passing duplicate IDs within a
+single frame is undefined behavior.
 
 ---
 
@@ -501,10 +494,9 @@ renderer processes directives in the order they appear in the array.
 
 ### 10.3 Element identity within a frame
 
-Within a single frame, each element MUST have an unambiguous identity for the
-layout engine. As specified in Section 9.3, the renderer handles disambiguation.
-Two elements with the same id in the same frame MUST NOT cause layout
-corruption, hash collision, or identity conflation.
+Within a single frame, each element MUST have a unique identity for the layout
+engine. As specified in Section 9.3, element IDs MUST be unique within a frame.
+Passing duplicate IDs is undefined behavior.
 
 ### 10.4 No cross-frame identity
 
