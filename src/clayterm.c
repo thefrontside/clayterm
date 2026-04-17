@@ -611,6 +611,20 @@ char *output(struct Clayterm *ct) { return ct->out.data; }
 
 int length(struct Clayterm *ct) { return ct->out.length; }
 
+int get_element_bounds(const char *name, int name_len, float *out) {
+  Clay_String str = {.length = name_len, .chars = name};
+  Clay_ElementId eid = Clay__HashString(str, 0);
+  Clay_ElementData data = Clay_GetElementData(eid);
+  if (!data.found) {
+    return 0;
+  }
+  out[0] = data.boundingBox.x;
+  out[1] = data.boundingBox.y;
+  out[2] = data.boundingBox.width;
+  out[3] = data.boundingBox.height;
+  return 1;
+}
+
 int pointer_over_count(void) { return Clay_GetPointerOverIds().length; }
 
 int pointer_over_id_string_length(int index) {

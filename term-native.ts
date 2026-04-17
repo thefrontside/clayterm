@@ -1,3 +1,21 @@
+import { f32, offsets, struct } from "./typedef.ts";
+
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const BoundingBoxStruct = struct<BoundingBox>({
+  x: f32(),
+  y: f32(),
+  width: f32(),
+  height: f32(),
+});
+
+const BOUNDING_BOX = offsets(BoundingBoxStruct);
+
 export interface Native {
   memory: WebAssembly.Memory;
   statePtr: number;
@@ -7,6 +25,7 @@ export interface Native {
   length(ct: number): number;
   setPointer(x: number, y: number, down: boolean): void;
   getPointerOverIds(): string[];
+  getElementBounds(id: string): BoundingBox | undefined;
 }
 
 import { compiled } from "./wasm.ts";
@@ -60,6 +79,7 @@ export async function createTermNative(
     pointer_over_count(): number;
     pointer_over_id_string_length(index: number): number;
     pointer_over_id_string_ptr(index: number): number;
+    get_element_bounds(name: number, len: number, out: number): number;
   };
 
   let heap = ct.__heap_base.value as number;
@@ -100,6 +120,23 @@ export async function createTermNative(
         ids.push(decoder.decode(new Uint8Array(memory.buffer, ptr, len)));
       }
       return ids;
+    },
+    getElementBounds(id: string): BoundingBox | undefined {
+      let enc = new TextEncoder();
+      let bytes = enc.encode(id);
+      new Uint8Array(memory.buffer).set(bytes, opsBuf);
+      let out = opsBuf + 256;
+      let found = ct.get_element_bounds(opsBuf, bytes.length, out);
+      if (!found) {
+        return undefined;
+      }
+      let view = new DataView(memory.buffer);
+      return {
+        x: view.getFloat32(out + BOUNDING_BOX.x, true),
+        y: view.getFloat32(out + BOUNDING_BOX.y, true),
+        width: view.getFloat32(out + BOUNDING_BOX.width, true),
+        height: view.getFloat32(out + BOUNDING_BOX.height, true),
+      };
     },
   };
 }

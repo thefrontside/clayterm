@@ -1,5 +1,5 @@
 import { type Op, pack } from "./ops.ts";
-import { createTermNative } from "./term-native.ts";
+import { type BoundingBox, createTermNative } from "./term-native.ts";
 
 export interface TermOptions {
   height: number;
@@ -32,9 +32,20 @@ export type PointerEvent =
   | { type: "pointerleave"; id: string }
   | { type: "pointerclick"; id: string };
 
+export type { BoundingBox };
+
+export interface ElementInfo {
+  bounds: BoundingBox;
+}
+
+export interface RenderInfo {
+  get(id: string): ElementInfo | undefined;
+}
+
 export interface RenderResult {
   output: Uint8Array;
   events: PointerEvent[];
+  info: RenderInfo;
 }
 
 export interface Term {
@@ -103,7 +114,17 @@ export async function createTerm(options: TermOptions): Promise<Term> {
       prev = current;
       wasDown = down;
 
-      return { output, events };
+      let info: RenderInfo = {
+        get(id: string): ElementInfo | undefined {
+          let bounds = native.getElementBounds(id);
+          if (bounds) {
+            return { bounds };
+          }
+          return undefined;
+        },
+      };
+
+      return { output, events, info };
     },
   };
 }

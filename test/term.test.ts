@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "./suite.ts";
 import { createTerm, type Term } from "../term.ts";
-import { close, grow, open, rgba, text } from "../ops.ts";
+import { close, fixed, grow, open, rgba, text } from "../ops.ts";
 import { print } from "./print.ts";
 
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -148,6 +148,46 @@ describe("term", () => {
 └──────────────────┘`.trim());
 
       expect(second.length).toBeLessThan(first.length);
+    });
+  });
+
+  describe("info", () => {
+    it("returns bounds for named elements", async () => {
+      let term = await createTerm({ width: 40, height: 10 });
+      let result = term.render([
+        open("root", {
+          layout: { width: grow(), height: grow(), direction: "ttb" },
+        }),
+        open("child", {
+          layout: { width: fixed(20), height: fixed(5) },
+        }),
+        close(),
+        close(),
+      ]);
+
+      let root = result.info.get("root");
+      expect(root).toBeDefined();
+      expect(root!.bounds).toEqual({ x: 0, y: 0, width: 40, height: 10 });
+
+      let child = result.info.get("child");
+      expect(child).toBeDefined();
+      expect(child!.bounds).toEqual({ x: 0, y: 0, width: 20, height: 5 });
+    });
+
+    it("returns undefined for unknown ids", async () => {
+      let term = await createTerm({ width: 20, height: 5 });
+      term.render([
+        open("root", { layout: { width: grow(), height: grow() } }),
+        close(),
+      ]);
+
+      let result = term.render([
+        open("root", { layout: { width: grow(), height: grow() } }),
+        close(),
+      ]);
+
+      expect(result.info.get("nonexistent")).toBeUndefined();
+      expect(result.info.get("")).toBeUndefined();
     });
   });
 
