@@ -21,6 +21,11 @@
 - Each test file tests exactly one spec. Do not put tests for one spec into
   another spec's test file.
 
+## Commit and PR conventions
+
+Do not include any agent marketing material (e.g. "Generated with...",
+"Co-Authored-By: \<agent>") in commits, pull requests, issues, or comments.
+
 ## Rendering invariants
 
 - The renderer MUST NOT perform IO. It produces bytes; the caller writes them.
