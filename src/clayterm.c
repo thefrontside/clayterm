@@ -577,7 +577,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
       /* attrs byte -> alpha channel for render_text to extract */
       config.textColor.a = (float)((cfg >> 24) & 0xff);
 
-      Clay__OpenTextElement(text, Clay__StoreTextElementConfig(config));
+      Clay__OpenTextElement(text, config);
       break;
     }
 
@@ -590,7 +590,7 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row) {
     }
   }
 
-  Clay_RenderCommandArray cmds = Clay_EndLayout();
+  Clay_RenderCommandArray cmds = Clay_EndLayout(0.0f);
 
   /* reset output state */
   ct->out.length = 0;
