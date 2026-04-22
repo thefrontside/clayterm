@@ -1,3 +1,5 @@
+import type { Transition } from "./ops-transitions.ts";
+
 /* Command buffer opcodes — mirrors ops.h */
 const OP_OPEN_ELEMENT = 0x02;
 const OP_TEXT = 0x03;
@@ -269,6 +271,7 @@ export interface OpenElement {
     attachPoints?: number;
     zIndex?: number;
   };
+  transition?: Transition;
 }
 
 export interface Text {

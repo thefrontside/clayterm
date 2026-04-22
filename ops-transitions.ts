@@ -51,3 +51,10 @@ export function easingByte(easing: Easing): number {
     case "easeInOut": return EASING_EASE_IN_OUT;
   }
 }
+
+export interface Transition {
+  duration: number;
+  easing?: Easing;
+  properties: TransitionProperty[];
+  interactive?: boolean;
+}
