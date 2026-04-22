@@ -51,6 +51,7 @@ struct Clayterm {
   /* error collection */
   Clay_ErrorData errors[MAX_ERRORS];
   int error_count;
+  int animating_count;
 };
 
 /* Memory layout inside the arena provided by the host:
@@ -470,6 +471,7 @@ struct Clayterm *init(void *mem, int w, int h) {
 void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row, float deltaTime) {
   int i = 0;
   ct->error_count = 0;
+  ct->animating_count = 0;
 
   Clay_BeginLayout();
 
@@ -643,6 +645,8 @@ void reduce(struct Clayterm *ct, uint32_t *buf, int len, int mode, int row, floa
 char *output(struct Clayterm *ct) { return ct->out.data; }
 
 int length(struct Clayterm *ct) { return ct->out.length; }
+
+int animating(struct Clayterm *ct) { return ct->animating_count; }
 
 int get_element_bounds(const char *name, int name_len, float *out) {
   Clay_String str = {.length = name_len, .chars = name};
