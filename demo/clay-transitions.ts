@@ -217,7 +217,7 @@ function view(state: State): Op[] {
       open(`row:${r}`, {
         layout: {
           width: grow(),
-          height: fixed(3),
+          height: grow(),
           direction: "ltr",
           gap: 1,
         },
