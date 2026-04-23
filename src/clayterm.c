@@ -20,6 +20,12 @@
 #include "utf8.h"
 #include "wcwidth.h"
 
+/* Module-level pointer to the Term currently executing reduce().
+ * Set/cleared around each render pass so transition handlers (which Clay
+ * invokes with no userData — see Clay_TransitionCallbackArguments) can
+ * report back to the right Term's animating_count. Revisit once
+ * nicbarker/clay#603 lands userData on transition callbacks; then the
+ * handler can resolve its Term from args directly and this can go away. */
 struct Clayterm *ct_active_context = NULL;
 
 /* ── Command buffer protocol ──────────────────────────────────────── */
