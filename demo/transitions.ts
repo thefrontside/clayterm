@@ -107,6 +107,7 @@ function view(state: State): Op[] {
         gap: 1,
       },
       bg: state.menuOpen ? SIDEBAR_BG_OPEN : SIDEBAR_BG_CLOSED,
+      clip: { horizontal: true },
       transition: {
         duration: 0.2,
         easing: "easeInOut",
@@ -118,13 +119,13 @@ function view(state: State): Op[] {
   if (state.menuOpen) {
     ops.push(
       open("menu-title", { layout: { height: fixed(1) } }),
-      text("Menu", { color: HEADING }),
+      text("Menu", { color: HEADING, wrap: 2 }),
       close(),
     );
     for (let item of MENU_ITEMS) {
       ops.push(
         open(`menu:${item}`, { layout: { height: fixed(1) } }),
-        text(item, { color: item === "—" ? DIM : MENU_ITEM }),
+        text(item, { color: item === "—" ? DIM : MENU_ITEM, wrap: 2 }),
         close(),
       );
     }
