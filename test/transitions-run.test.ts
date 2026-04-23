@@ -49,3 +49,23 @@ describe("transition lifecycle", () => {
     expect(r.animating).toBe(false);
   });
 });
+
+describe("transitions in line mode", () => {
+  it("runs color transitions in line mode", async () => {
+    let term = await createTerm({ width: 20, height: 5 });
+    let frame = (bg: number): Op[] => [
+      open("box", {
+        layout: { width: fixed(10), height: fixed(2) },
+        bg,
+        transition: { duration: 0.2, properties: ["bg"] },
+      }),
+      close(),
+    ];
+
+    term.render(frame(rgba(255, 0, 0)), { deltaTime: 0, mode: "line" });
+    term.render(frame(rgba(0, 255, 0)), { deltaTime: 0, mode: "line" });
+    let r = term.render(frame(rgba(0, 255, 0)), { deltaTime: 0.1, mode: "line" });
+    expect(r.animating).toBe(true);
+    expect(r.output).toBeInstanceOf(Uint8Array);
+  });
+});
