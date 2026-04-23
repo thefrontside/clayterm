@@ -81,6 +81,7 @@ export async function createTerm(options: TermOptions): Promise<Term> {
   let pressed = new Set<string>();
   let wasDown = false;
   let lastRenderAt: number | undefined;
+  let wasAnimating = false;
 
   return {
     render(ops: Op[], options?: RenderOptions): RenderResult {
@@ -91,7 +92,7 @@ export async function createTerm(options: TermOptions): Promise<Term> {
       let dt: number;
       if (options?.deltaTime !== undefined) {
         dt = options.deltaTime;
-      } else if (lastRenderAt === undefined) {
+      } else if (!wasAnimating || lastRenderAt === undefined) {
         dt = 0;
       } else {
         dt = now - lastRenderAt;
@@ -165,7 +166,9 @@ export async function createTerm(options: TermOptions): Promise<Term> {
         });
       }
 
-      return { output, events, info, errors, animating: native.animating(statePtr) > 0 };
+      let animating = native.animating(statePtr) > 0;
+      wasAnimating = animating;
+      return { output, events, info, errors, animating };
     },
   };
 }

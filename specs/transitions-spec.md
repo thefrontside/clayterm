@@ -108,6 +108,16 @@ The `Term` instance is the sole source of frame-to-frame time. On each
 seconds since the previous render. That value is passed to the layout
 engine to advance any in-flight transitions.
 
+If the previous render reported `animating=false`, the Term passes
+`deltaTime=0` to the layout engine on the current render, regardless of
+wall-clock time elapsed. The rationale: Clay is delta-based and has no
+concept of when a transition began. Idle time between renders must not
+count toward any subsequent transition's elapsed clock, otherwise a long
+idle gap followed by a mutation would cause the transition to complete
+instantly. Passing `deltaTime=0` on the first frame of any new transition
+gives it a clean elapsed=0 starting point; real deltas resume once the
+previous render signals `animating=true`.
+
 The caller MAY override the computed delta via an explicit `deltaTime`
 option on `render()`. Use cases include deterministic testing, snapshot
 rendering, and compute-only renders where the caller is querying bounds
@@ -209,9 +219,11 @@ interface RenderOptions {
 
 Each `render()` call advances transitions by its `deltaTime`:
 
-- If `deltaTime` is omitted, Term computes it as the monotonic wall-clock
-  time elapsed since the previous `render()` call.
-- If `deltaTime` is provided, it is used verbatim for that frame.
+- If `deltaTime` is provided explicitly, it is used verbatim.
+- Otherwise, if the previous render reported `animating=false`,
+  `deltaTime=0` (see §4.2 for rationale).
+- Otherwise, `deltaTime` is the monotonic wall-clock time elapsed since
+  the previous `render()` call.
 
 On every `render()` call, Term captures the current monotonic timestamp as
 the reference point for the next implicit delta. The two modes can be
